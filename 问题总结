@@ -1,0 +1,10 @@
+#项目中遇到的问题
+##问题
+###1.mybaits.mapper中多参数的传入
+- 使用mybaits时,使用xml进行数据库操作,当指定参数时,如果只有一个参数则可以直接用:#{参数名},但是当有两个及以上参数时,必须使用:#{0},#{1}...,其中的数字代表参数的在函数中的顺序;或者使用param1与param2;
+- 这里更推荐"注解"的方式 : 在dao.class中的对应方法中的参数传入加上注解,例如:
+```
+public int update(@Param(value = "mobile") String mobile,
+ @Param(value = "password") String password))
+//这样的话,就可以在mapper文件中利用"参数名"使用参数了
+```

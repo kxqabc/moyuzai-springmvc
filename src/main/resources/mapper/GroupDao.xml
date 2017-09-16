@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moyuzai.servlet.dao.GroupDao">
+
+    <select id="queryById" resultType="Group">
+        SELECT id,managerId,groupName,picId FROM groups WHERE  id = #{groupId}
+    </select>
+
+    <select id="queryByGroupNameManagerId" resultType="Group">
+--     多输入参数的parameterType该怎么写？
+        SELECT id,groupName,managerId FROM groups WHERE groupName = #{groupName} AND
+        managerId = #{managerId}
+    </select>
+
+    <insert id="createGroup" >
+                INSERT INTO groups (groupName, managerId)
+                VALUES (#{groupName},#{managerId})
+    </insert>
+
+    <update id="addGroupPic" >
+        UPDATE groups g SET g.picId = #{picId} WHERE g.id = #{groupId}
+    </update>
+
+    <delete id="deleteGroup" parameterType="long">
+        DELETE FROM groups WHERE id = #{groupId} AND managerId = #{managerId}
+    </delete>
+
+</mapper>

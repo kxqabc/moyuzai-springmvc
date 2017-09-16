@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moyuzai.servlet.dao.UserGroupDao">
+
+    <select id="queryUserGroup" parameterType="long" resultType="UserGroup">
+        SELECT id,groupId,userId FROM user_group WHERE groupId = #{groupId}
+        AND userId = #{userId}
+    </select>
+
+    <select id="queryAllUserIdOfGroup" parameterType="long" resultType="java.lang.Long">
+        SELECT userId FROM user_group WHERE groupId = #{groupId}
+    </select>
+
+    <select id="getOfflineTextMulti" parameterType="long" resultType="java.lang.String">
+        select offlineText FROM user_group WHERE userId = #{userId} AND offlineText!=''
+    </select>
+
+    <select id="getOfflineTextUnique" parameterType="long" resultType="java.lang.String">
+        SELECT offlineText FROM user_group WHERE userId = #{userId} AND groupId = #{groupId}
+    </select>
+
+    <update id="updateOfflineTextUnique">
+        UPDATE user_group set offlineText=#{text} where groupId=#{groupId} and
+         userId=#{userId}
+    </update>
+
+    <update id="updateOfflineTextMulti">
+        UPDATE user_group set offlineText='' where userId=#{userId}
+    </update>
+
+    <insert id="saveUserGroup" parameterType="long">
+        INSERT INTO user_group (groupId,userId) VALUES (#{groupId},#{userId})
+    </insert>
+
+    <delete id="deleteUserGroup" parameterType="long">
+        DELETE FROM user_group WHERE groupId = #{groupId}
+        AND userId = #{userId}
+    </delete>
+</mapper>
