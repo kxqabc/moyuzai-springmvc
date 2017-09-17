@@ -12,7 +12,8 @@ import java.util.Set;
 
 @Service
 public class MinaServiceImpl implements MinaService{
-    //新加上的注释
+
+    //增加本条注释并commit
 
     @Autowired
     private UserService userService;
