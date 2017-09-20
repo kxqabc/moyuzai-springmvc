@@ -125,6 +125,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         return userIds;
     }
 
+
     /**
      * 插入消息
      * @param protoMessage

@@ -362,26 +362,6 @@ public class MyController {
         return groupService.deleteGroup(managerId,groupId);
     }
 
-
-
-//    @ResponseBody
-//    @RequestMapping(value = "/changeGroupPic")
-//    public UsersResponse changeGroupPic(@RequestParam(value = "managerId")long managerId,
-//                                        @RequestParam(value = "groupId")long groupId,
-//                                        @RequestParam(value = "picId")int picId){
-//        logger.info("修改群组头像。。");
-//        return groupService.changeGroupPic(groupId,managerId,picId);
-//    }
-
-//    @ResponseBody
-//    @RequestMapping(value = "/changeGroupName")
-//    public UsersResponse changeGroupName(@RequestParam(value = "managerId")long managerId,
-//                                         @RequestParam(value = "groupId")long groupId,
-//                                         @RequestParam(value = "groupName")String groupName){
-//        logger.info("修改群组名称。。");
-//        return groupService.changeGroupName(groupId,managerId,groupName);
-//    }
-
     @ResponseBody
     @RequestMapping(value = "/changeGroupData")
     public UsersResponse changeGroupData(@RequestParam(value = "managerId")long managerId,

@@ -43,6 +43,7 @@
                 <entry key="codec">
                     <bean class="org.apache.mina.filter.codec.ProtocolCodecFilter">
                         <constructor-arg>
+                            <!--使用mina自带的过滤器，可序列化过滤器，可对象转换为字节-->
                             <bean class="org.apache.mina.filter.codec.serialization.ObjectSerializationCodecFactory"></bean>
                             <!--<bean class="com.moyuzai.servlet.mina.coder.MessageCodeFactory"/>-->
                             <!--<bean class="org.apache.mina.filter.codec.textline.TextLineCodecFactory" />-->

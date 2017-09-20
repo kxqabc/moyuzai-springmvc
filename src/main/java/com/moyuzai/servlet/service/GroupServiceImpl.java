@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -37,6 +38,8 @@ public class GroupServiceImpl implements GroupService{
     private UserGroupService userGroupService;
     @Autowired
     private UserService userService;
+    @Autowired
+    private MinaService minaService;
 
     @Override
     public UsersResponse getAllGroups(int offset, int limit) {
@@ -254,16 +257,30 @@ public class GroupServiceImpl implements GroupService{
         return false;
     }
 
+    /**
+     * 删除群组并通知所有人
+     * @param managerId
+     * @param groupId
+     * @return
+     */
     @Override
     public UsersResponse deleteGroup(long managerId, long groupId) {
         //首先确定群组是否存在
         boolean groupIsExist = checkGroupIsExist(groupId);
         if (!groupIsExist)
             return new UsersResponse(MyEnum.GROUP_IS_NOT_EXIST);
+        //获取某群组的所有用户Id
+        List<Long> userIds = userGroupService.queryAllUserIdOfGroup(groupId);
+        Set<Long> userIdSet = new HashSet<>();
+        userIdSet.addAll(userIds);
+        userIdSet.remove(managerId);    //除去管理者，不通知他
         //删除群组，因为外键
         int effectCount = groupDao.deleteGroup(managerId,groupId);
-        if (effectCount>0)
+        if (effectCount>0){
+            //通知组内所有人该组解散
+            minaService.notifyUserGroupIsDisMissed(userIdSet,groupId);
             return new UsersResponse(MyEnum.DISMISS_GROUP_SUCCESS);
+        }
         else
             return new UsersResponse(MyEnum.DISMISS_GROUP_FAIL);
     }

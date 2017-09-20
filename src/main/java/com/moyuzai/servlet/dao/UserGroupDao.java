@@ -15,6 +15,9 @@ public interface UserGroupDao {
                              @Param("userId")long userId);
 
     int queryAmountInGroupByGroupId(@Param("groupId")long groupId);
+//    只查询该用户所在的第一个groupId！=exGroupId的群组关系对象
+    UserGroup queryAnotherGroupOfUser(@Param("exGroupId")long exGroupId,
+                                 @Param("userId")long userId);
 
     /**新增一个关系表内容*/
     int saveUserGroup(@Param("groupId")long groupId,

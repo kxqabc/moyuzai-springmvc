@@ -8,9 +8,13 @@ import java.util.Set;
 
 public interface MinaService {
 
+    boolean isOnline(long userId);
+
     void notifyUserIsPulledIntoGroup(Set<Long> userIdSet,
                                      String groupName,
                                      UsersResponse usersResponse);
+
+    void notifyUserGroupIsDisMissed(Set<Long> userIdSet,long groupId);
 
     void notifyUsersGroupMessageChange(long groupId);
 }

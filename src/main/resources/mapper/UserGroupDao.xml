@@ -16,6 +16,10 @@
     <select id="queryAmountInGroupByGroupId" parameterType="long" resultType="int">
         SELECT COUNT(*) FROM user_group WHERE groupId = #{groupId}
     </select>
+    <!--  <![CDATA[ <> ]]> 代表不等于-->
+    <select id="queryAnotherGroupOfUser" parameterMap="long" resultType="UserGroup">
+        SELECT id,groupId,userId FROM user_group WHERE groupId <![CDATA[ <> ]]> #{exGroupId} AND userId = #{userId} ORDER BY id LIMIT 1
+    </select>
 
     <select id="queryAllUserIdOfGroup" parameterType="long" resultType="java.lang.Long">
         SELECT userId FROM user_group WHERE groupId = #{groupId}

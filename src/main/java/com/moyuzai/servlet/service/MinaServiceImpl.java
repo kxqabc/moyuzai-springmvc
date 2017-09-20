@@ -34,6 +34,11 @@ public class MinaServiceImpl implements MinaService{
     @Resource
     private ServerHandler serverHandler;    //mina的核心处理器，这里controller需要控制mina主动发送消息
 
+    @Override
+    public boolean isOnline(long userId) {
+        return serverHandler.getSessionMap().containsKey(userId);
+    }
+
     /**
      * 在创建群组（带有初始化信息：组员、头像）成功后，依次通知所有被拉入该组的用户（用户在线则立即发送socket消息，
      * 若离线则讲信息保存在对应的数据库表中。）
@@ -55,6 +60,15 @@ public class MinaServiceImpl implements MinaService{
                 "","",groupJSON);
         /** 调用serverHandler的方法利用socket通知用户 */
         serverHandler.pulledIntoGroupNotify(userIdSet,groupId,message,userGroupService);        //通知被拉入的组员
+    }
+
+    @Override
+    public void notifyUserGroupIsDisMissed(Set<Long> userIdSet,long groupId) {
+        /** 使用工具类方法将“普通信息”包装成protoMessage */
+        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessage(
+                MessageProtoBuf.ProtoMessage.Type.DISMISS_GROUP_NOTIFY,    //构造ProtoMessage
+                "","",""+groupId);
+        serverHandler.groupDismissNotify(userIdSet,groupId,message);
     }
 
     @Override
