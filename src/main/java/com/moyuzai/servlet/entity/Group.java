@@ -9,6 +9,19 @@ public class Group {
     private int picId;
     private Timestamp createTime;
 
+    //一个user可以是多个组的管理员
+    private String managerName;
+    //群人数
+    private int amount;
+
+    public int getAmount() {
+        return amount;
+    }
+
+    public void setAmount(int amount) {
+        this.amount = amount;
+    }
+
     public Group() {
     }
 
@@ -47,5 +60,13 @@ public class Group {
 
     public void setPicId(int picId) {
         this.picId = picId;
+    }
+
+    public String getManagerName() {
+        return managerName;
+    }
+
+    public void setManagerName(String managerName) {
+        this.managerName = managerName;
     }
 }

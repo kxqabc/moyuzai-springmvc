@@ -4,6 +4,10 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moyuzai.servlet.dao.GroupDao">
 
+    <select id="queryAll" resultMap="groupList">
+        SELECT * FROM groups ORDER BY id LIMIT #{offset},#{limit}
+    </select>
+
     <select id="queryById" resultType="Group">
         SELECT id,managerId,groupName,picId FROM groups WHERE  id = #{groupId}
     </select>
@@ -14,17 +18,46 @@
         managerId = #{managerId}
     </select>
 
+    <select id="queryGroupWithManNameById" parameterType="long" resultMap="groupWithManName">
+        SELECT *
+        FROM groups g INNER JOIN users u ON u.id = g.managerId
+        WHERE g.id = #{groupId}
+    </select>
+
     <insert id="createGroup" >
                 INSERT INTO groups (groupName, managerId)
                 VALUES (#{groupName},#{managerId})
     </insert>
 
-    <update id="addGroupPic" >
+    <update id="updateGroupPic" >
         UPDATE groups g SET g.picId = #{picId} WHERE g.id = #{groupId}
+    </update>
+    <update id="updateGroupName">
+        UPDATE groups g SET g.groupName = #{groupName} WHERE g.id = #{groupId}
     </update>
 
     <delete id="deleteGroup" parameterType="long">
         DELETE FROM groups WHERE id = #{groupId} AND managerId = #{managerId}
     </delete>
+
+    <delete id="deleteGroupById" parameterType="long">
+        DELETE FROM groups WHERE id = #{groupId}
+    </delete>
+
+    <!--resultMap-->
+    <resultMap id="groupWithManName" type="Group">
+        <id column="id" property="id"/>
+        <result column="managerId" property="managerId"/>
+        <result column="groupName" property="groupName"/>
+        <result column="picId" property="picId"/>
+        <result column="userName" property="managerName"/>
+    </resultMap>
+
+    <resultMap id="groupList" type="Group">
+        <id column="id" property="id" />
+        <result column="groupName" property="groupName" />
+        <result column="managerId" property="managerId"/>
+        <result column="picId" property="picId"/>
+    </resultMap>
 
 </mapper>

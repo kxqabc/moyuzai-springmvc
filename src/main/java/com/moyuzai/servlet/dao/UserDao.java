@@ -17,6 +17,8 @@ public interface UserDao {
 
     User queryByMobile(String mobile);
 
+    User queryPasswardByMobile(@Param(value = "mobile") String mobile);
+
     User queryByMobilePassword(@Param(value = "mobile") String mobile,
                                @Param(value = "password") String password);
 

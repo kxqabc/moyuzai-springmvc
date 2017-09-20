@@ -8,6 +8,10 @@ import java.util.Set;
 
 public interface UserGroupService {
 
+    UsersResponse getAll(int offset, int resultCount);
+
+    int getAmountInGroupById(long groupId);
+
     UsersResponse joinGroup(long userId, long groupId);
 
     UsersResponse signoutFromGroup(long userId, long groupId);
@@ -16,7 +20,13 @@ public interface UserGroupService {
 
     List<Long> queryAllUserIdOfGroup(long groupId);
 
-    UsersResponse addUserToGroup(Set<Long> userIdSet, long managerId, String groupName, int picId);
+    UsersResponse addUserPicToGroup(Set<Long> userIdSet, long managerId, String groupName, int picId);
+
+    void addUsersToGroup(Set<Long> userIdSet,long groupId);
+
+    void deleteUsersOfGroup(Set<Long> userIdSet,long groupId);
+
+    UsersResponse deleteUsersOfGroup(long id);
 
     int insertOfflineText(MessageProtoBuf.ProtoMessage protoMessage,
                           long userId, long groupId);

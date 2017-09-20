@@ -1,11 +1,14 @@
 package com.moyuzai.servlet.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import proto.MessageProtoBuf;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.Set;
 
-public class DataFormatTransformUtil {
+public class DataFormatTransformUtil{
 
     public DataFormatTransformUtil() {
     }
@@ -41,5 +44,22 @@ public class DataFormatTransformUtil {
                 longSet.add(Long.parseLong(element));
         }
         return longSet;
+    }
+
+    /**
+     * 将对象转为JSON
+     * @param object
+     * @return
+     */
+    public static String objectToJson(Object object){
+        StringWriter str = new StringWriter();
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            mapper.writeValue(str, object);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return str.toString();
+
     }
 }

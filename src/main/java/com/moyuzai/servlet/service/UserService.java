@@ -19,7 +19,7 @@ public interface UserService {
 
     UsersResponse userLogin(String mobile,String password);
 
-    UsersResponse getAllUsers(int offset, int resultCount);
+    UsersResponse getAllUsers(int offset, int limit);
 
     UsersResponse sendLoginMessage(String mobile,HttpSession httpSession);
 

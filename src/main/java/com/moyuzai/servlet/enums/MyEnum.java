@@ -18,6 +18,9 @@ public enum MyEnum {
     SIGNOUT_SUCCESS(true,10,""),
     DELETE_USER_SUCCESS(true,11,"删除用户成功！"),
     DISMISS_GROUP_SUCCESS(true,12,"解散群组成功！"),
+    CHANGE_GROUP_PIC_SUCCESS(true,13,"修改群组头像成功！"),
+    CHANGE_GROUP_NAME_SUCCESS(true,14,"修改群组名称成功！"),
+    CHANGE_GROUP_DATE_SUCCESS(true,15,"修改群组信息成功！"),
 
     INNER_REEOR(false,0,"内部错误！"),
     USER_NOT_FOUND(false,-1,"找不到用户！"),
@@ -44,7 +47,10 @@ public enum MyEnum {
     SIGNOUT_GROUP_FAIL(false,-22,""),
     DELETE_USER_FAIL(false,-23,"删除用户失败！"),
     DISMISS_GROUP_FAIL(false,-24,"解散群组失败！"),
-    USER_EXIST(false,-25,"用户已经存在！");
+    USER_EXIST(false,-25,"用户已经存在！"),
+    PASSWORD_ERROR(false,-26,"密码错误！"),
+    NOT_THE_MANAGER_OF_THIS_GROUP(false,-27,"对不起，您不是该群组的管理员！操作无效！"),
+    CHANG_GROUP_NAME_FAIL(false,-28,"修改群组名称失败！");
 
     private boolean state;
     private int stateNum;

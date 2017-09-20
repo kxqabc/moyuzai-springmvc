@@ -3,13 +3,12 @@ package com.moyuzai.servlet.controller;
 import com.moyuzai.servlet.dto.GroupResponse;
 import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.enums.MyEnum;
-import com.moyuzai.servlet.exception.AddPicIdErrorException;
-import com.moyuzai.servlet.exception.AddUserToGroupErrorException;
-import com.moyuzai.servlet.exception.CreateGroupErrorException;
+import com.moyuzai.servlet.exception.*;
 import com.moyuzai.servlet.service.GroupService;
 import com.moyuzai.servlet.service.MinaService;
 import com.moyuzai.servlet.service.UserGroupService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
+import com.sun.org.apache.regexp.internal.RE;
 import org.slf4j.Logger;
 import com.moyuzai.servlet.service.UserService;
 import org.slf4j.LoggerFactory;
@@ -35,7 +34,7 @@ public class MyController {
 
 //    private static final int LIMIT = 20;     //默认返回结果集个数
 
-    private static final int STEP = 20;      //每页的结果条数
+    private static final int STEP = 10;      //每页的结果条数
 
     private static final int OFFSET = 0;     //结果集默认起始位置
 
@@ -60,8 +59,12 @@ public class MyController {
         logger.info("请求进入控制转发器。。");
         switch (type){
             case "users":return "forward:/users";
+            case "groups":return "forward:/groups";
+            case "userGroups":return "forward:/userGroups";
             case "getUser":return "forward:/getById";
             case "deleteUser":return "forward:/deleteUserById";
+            case "deleteGroup":return "forward:/deleteGroupById";
+            case "deleteUserGroup":return "forward:/deleteUserGroupById";
             case "GETUSER":return "forward:/getByMobile";
             case "GETSME":return "forward:/sendLoginMessage";
             case "MATCH":return "forward:/matchCode";
@@ -75,6 +78,10 @@ public class MyController {
             case "JOINGROUP":return "forward:/joinGroup";
             case "SIGNOUTGROUP":return "forward:/signoutFromGroup";
             case "DISMISSGROUP":return "forward:/dismissGroup";
+            case "CHANGEPIC":return "forward:/changeGroupPic";
+            case "CHANGEGROUPNAME":return "forward:/changeGroupName";
+            case "ADDUSER":return "forward:/addUserToGroup";
+            case "CHGROUPDATA":return "forward:/changeGroupData";
             default:return "forward:/paramNotFound";
         }
     }
@@ -111,6 +118,45 @@ public class MyController {
         /**pageNum从1开始*/
         UsersResponse usersResponse = userService.getAllUsers(STEP*(pageNum-1), STEP*pageNum);
         return usersResponse;
+    }
+    @ResponseBody
+    @RequestMapping(value = "/groups")
+    public UsersResponse groups(@RequestParam("pageNum") int pageNum){
+        logger.info("查询所有群组。。");
+        /**pageNum从1开始*/
+        UsersResponse usersResponse = groupService.getAllGroups(STEP*(pageNum-1), STEP*pageNum);
+        return usersResponse;
+    }
+    @ResponseBody
+    @RequestMapping(value = "/userGroups")
+    public UsersResponse userGroups(@RequestParam("pageNum") int pageNum){
+        logger.info("查询所有关系表数据。。");
+        /**pageNum从1开始*/
+        UsersResponse usersResponse = userGroupService.getAll(STEP*(pageNum-1), STEP*pageNum);
+        return usersResponse;
+    }
+    /**
+     * 删除用户
+     * @param userId
+     * @return
+     */
+    @ResponseBody
+    @RequestMapping(value = "/deleteUserById")
+    public UsersResponse deleteUserById(@RequestParam(value = "userId")long userId){
+        logger.info("删除用户。。");
+        return userService.deleteUserById(userId);
+    }
+    @ResponseBody
+    @RequestMapping(value = "/deleteGroupById")
+    public UsersResponse deleteGroupById(@RequestParam(value = "groupId")long groupId){
+        logger.info("删除群组。。");
+        return groupService.deleteGroup(groupId);
+    }
+    @ResponseBody
+    @RequestMapping(value = "/deleteUserGroupById")
+    public UsersResponse deleteUserGroupById(@RequestParam(value = "id")long id){
+        logger.info("删除关系表中一条数据。。");
+        return userGroupService.deleteUsersOfGroup(id);
     }
 
     /**
@@ -243,6 +289,10 @@ public class MyController {
             UsersResponse usersResponse = groupService.createGroupWithInit(userIdSet,managerId,groupName,picId);
             /**全部操作成功后，则通知所有组员已经被拉入该群组*/
             if (usersResponse.isState()){
+                //除去管理员，不用通知他
+                if (userIdSet.contains(managerId))
+                    userIdSet.remove(managerId);
+                //通知其他人
                 minaService.notifyUserIsPulledIntoGroup(userIdSet,groupName,usersResponse);
             }
             return usersResponse;       //创建成功，返回成功信息的dto
@@ -311,16 +361,57 @@ public class MyController {
         return groupService.deleteGroup(managerId,groupId);
     }
 
-    /**
-     * 删除用户
-     * @param userId
-     * @return
-     */
+
+
+//    @ResponseBody
+//    @RequestMapping(value = "/changeGroupPic")
+//    public UsersResponse changeGroupPic(@RequestParam(value = "managerId")long managerId,
+//                                        @RequestParam(value = "groupId")long groupId,
+//                                        @RequestParam(value = "picId")int picId){
+//        logger.info("修改群组头像。。");
+//        return groupService.changeGroupPic(groupId,managerId,picId);
+//    }
+
+//    @ResponseBody
+//    @RequestMapping(value = "/changeGroupName")
+//    public UsersResponse changeGroupName(@RequestParam(value = "managerId")long managerId,
+//                                         @RequestParam(value = "groupId")long groupId,
+//                                         @RequestParam(value = "groupName")String groupName){
+//        logger.info("修改群组名称。。");
+//        return groupService.changeGroupName(groupId,managerId,groupName);
+//    }
+
     @ResponseBody
-    @RequestMapping(value = "/deleteUserById")
-    public UsersResponse deleteUserById(@RequestParam(value = "userId")long userId){
-        logger.info("删除用户。。");
-        return userService.deleteUserById(userId);
+    @RequestMapping(value = "/changeGroupData")
+    public UsersResponse changeGroupData(@RequestParam(value = "managerId")long managerId,
+                                         @RequestParam(value = "groupId")long groupId,
+                                         //这里必须用对象Integer，否则用int的话是基础类型，若为null不能转换，会报错！
+                                         @RequestParam(value = "picId",required = false)Integer picId,
+                                         @RequestParam(value = "groupName",required = false)String groupName,
+                                         @RequestParam(value = "addUsers",required = false)String addUsers,
+                                         @RequestParam(value = "minusUsers",required = false)String minusUsers){
+        logger.info("修改群组资料。。");
+        logger.info("picId:"+picId+",groupName:"+groupName+",users:"+addUsers+"/"+minusUsers);
+        try {
+            UsersResponse usersResponse = groupService.updateGroupDate(groupId,
+                    managerId,picId,groupName,addUsers,minusUsers);
+            //如果操作成功，通知群内其他所有人
+            if (usersResponse.isState()){
+//                minaService.
+            }
+            //成功的回复
+            return usersResponse;
+        }catch (AddPicIdErrorException e1){
+            return new UsersResponse(MyEnum.ADD_GROUP_PIC_FAIL);
+        }catch (ChangeGroupNameException e2){
+            return new UsersResponse(MyEnum.CHANG_GROUP_NAME_FAIL);
+        }catch (AddUserToGroupErrorException e3){
+            return new UsersResponse(MyEnum.REMAIN_USERS);
+        }catch (DeleteUserException e4){
+            return new UsersResponse(MyEnum.DELETE_USER_FAIL);
+        }catch (Exception e){
+            return new UsersResponse(MyEnum.INNER_REEOR);
+        }
     }
 
     /**

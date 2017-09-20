@@ -48,12 +48,15 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public UsersResponse userLogin(String mobile, String password) {
-        User user = userDao.queryByMobilePassword(mobile,password);
+        //queryPasswardByMobile()方法获取的user对象中包含了id、userName、password
+        User user = userDao.queryPasswardByMobile(mobile);
         if (user == null || "".equals(user))
-            return new UsersResponse(MyEnum.LOGIN_FAIL);
-        else
+            return new UsersResponse(MyEnum.NEVER_REGISTER);
+        else if (password.equals(user.getPassword()))
             return new UsersResponse(MyEnum.LOGIN_SUCCESS,
-                    user.getUserName()+"("+ user.getId() +")");
+                    user.getUserName()+"("+user.getId()+")");
+        else
+            return new UsersResponse(MyEnum.PASSWORD_ERROR);
     }
 
     @Override

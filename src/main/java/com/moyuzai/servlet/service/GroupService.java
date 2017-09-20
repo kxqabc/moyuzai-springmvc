@@ -9,9 +9,18 @@ import java.util.Set;
 
 public interface GroupService {
 
+    UsersResponse getAllGroups(int offset, int limit);
+
     GroupResponse getGroupById(long groupId);
 
     Group queryGroupByGroupNameManId(String groupName, long managerId);
+
+    UsersResponse changeGroupPic(long groupId,long managerId,int picId);
+
+    UsersResponse changeGroupName(long groupId,long managerId,String groupName);
+
+    UsersResponse updateGroupDate(long groupId,long managerId,Integer picId,
+                                  String groupName,String addUsers,String minusUsers);
 
     UsersResponse createGroup(String groupName, long managerId);
 
@@ -22,6 +31,10 @@ public interface GroupService {
 
     boolean checkGroupIsExist(long groupId);
 
+    boolean isManagerOfThisGroup(long groupId,long managerId);
+
     UsersResponse deleteGroup(long managerId,long groupId);
+
+    UsersResponse deleteGroup(long groupId);
 
 }

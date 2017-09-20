@@ -1,8 +1,12 @@
 package com.moyuzai.servlet.service;
 
+import com.moyuzai.servlet.dao.GroupDao;
+import com.moyuzai.servlet.dao.UserGroupDao;
 import com.moyuzai.servlet.dto.UsersResponse;
+import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.mina.core.ServerHandler;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import proto.MessageProtoBuf;
@@ -22,6 +26,11 @@ public class MinaServiceImpl implements MinaService{
     @Autowired
     private UserGroupService userGroupService;
 
+    @Autowired
+    private GroupDao groupDao;
+    @Autowired
+    private UserGroupDao userGroupDao;
+
     @Resource
     private ServerHandler serverHandler;    //mina的核心处理器，这里controller需要控制mina主动发送消息
 
@@ -36,10 +45,20 @@ public class MinaServiceImpl implements MinaService{
     public void notifyUserIsPulledIntoGroup(Set<Long> userIdSet,String groupName,UsersResponse usersResponse) {
         String groupInfo = (String)usersResponse.getIdentity();     //从dto中取出群组信息：ID和名称
         long groupId = Long.parseLong(groupInfo.substring(groupInfo.indexOf("(") + 1, groupInfo.indexOf(")")));     //从群组信息中获取群组ID
+        Group group = groupDao.queryById(groupId);
+        int userAmount = userGroupDao.queryAmountInGroupByGroupId(groupId);   //获取群人数
+        group.setAmount(userAmount);
+        String groupJSON = DataFormatTransformUtil.objectToJson(group);
         /** 使用工具类方法将“普通信息”包装成protoMessage */
-        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessage(MessageProtoBuf.ProtoMessage.Type.CHAT,    //构造ProtoMessage
-                ""+groupId,"","你已经被拉入群组：" + groupName + "(" + groupId + ")");
+        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessage(
+                MessageProtoBuf.ProtoMessage.Type.JOIN_GROUP_NOTIFY,    //构造ProtoMessage
+                "","",groupJSON);
         /** 调用serverHandler的方法利用socket通知用户 */
         serverHandler.pulledIntoGroupNotify(userIdSet,groupId,message,userGroupService);        //通知被拉入的组员
+    }
+
+    @Override
+    public void notifyUsersGroupMessageChange(long groupId) {
+
     }
 }

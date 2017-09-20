@@ -14,6 +14,10 @@
         SELECT id,userName,mobile FROM users WHERE mobile = #{mobile}
     </select>
 
+    <select id="queryPasswardByMobile" parameterType="String" resultType="User">
+        SELECT id,userName,password FROM users WHERE mobile = #{mobile}
+    </select>
+
     <select id="queryByMobilePassword" parameterType="String" resultType="User">
         SELECT id,userName,mobile FROM users WHERE mobile = #{mobile} AND
          password = #{password}

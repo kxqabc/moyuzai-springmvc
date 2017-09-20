@@ -8,45 +8,75 @@
 <!-- 包含 bootstrap 样式表 -->
 <link rel="stylesheet" href="bootstrap.min.css">
 <title>墨鱼仔-测试</title>
-<script src="jquery-1.10.2.min.js">
+    <script src="jquery-1.10.2.min.js">
 </script>
 </head>
 
 <script type="text/javascript">
-  // "http://139.199.170.95:8080/moyuzaiServer/Controller?type=queryAllUsers&callback=?"
     $(function(){
-      $("#user").click(function(){    //user按钮功能
+        $("#label").hide();
+      $("#option1").click(function(){    //user按钮功能
           $(this).attr("disable","true");
-        showUserList();
+          type = "users";
+          initTableParam(type);
+          showDataList(type);
       });
     });
+  $(function(){
+      $("#option2").click(function(){    //user按钮功能
+          $(this).attr("disable","true");
+          type = "groups";
+          initTableParam(type);
+          showDataList(type);
+      });
+  });
+  $(function(){
+      $("#option3").click(function(){    //user按钮功能
+          $(this).attr("disable","true");
+          type = "userGroups";
+          initTableParam(type);
+          showDataList(type);
+      });
+  });
 </script>
 
 <script type="text/javascript">
-  function showUserList(){
+    var pageNum = 1;
+    var anyMore = true;
+    var type;
+    var title = new Array(3);
+    var param = new Array(3);
+    var remoteUrl = "http://139.199.170.95:80/moyuzaiServer/Controller?type=";
+    var localUrl = remoteUrl;//"/Controller?type=";//"http://localhost:8080/Controller?type=";
+</script>
+
+
+<script type="text/javascript">
+  function showDataList(type){
       var $this = $(this);
-      $this.attr("disabled","true");
-      $.getJSON("http://localhost:8080/Controller?type=users&pageNum=1",
+      pageNum = 1;      //每次刷新列表都将页数还原到第一页
+      $("#form1").empty();      //每次点击都清除一下原表格form1
+      $.getJSON(localUrl+type+"&pageNum=1",
           function(data){
               var array = data["identity"];
-              // rowspan=$rowspan style='vertical-align: middle;text-align: center;水平垂直居中！
-              $("table").append("<tr> <td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + "用户id" + "</td>" +
-              "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + "用户名称" + "</td>" +
-              "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + "手机号" + "</td>" +
+              anyMore = true;
+              $("table").append("<tr> <td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + title[0] + "</td>" +
+              "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + title[1] + "</td>" +
+              "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + title[2] + "</td>" +
               "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + "操作" + "</td>+</tr>");
               $.each(array, function (index, element) {
                 var button = $("<button type='button' class='btn btn-default'>index</button>");
-                  $("tbody").append("<tr><td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + element["id"] + "</td>" +
-                  "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + element["userName"] + "</td>" +
-                  "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + element["mobile"] + "</td>"+
+                  $("tbody").append("<tr><td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + element[param[0]] + "</td>" +
+                  "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + element[param[1]] + "</td>" +
+                  "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + element[param[2]] + "</td>"+
                   "<td class='cell' rowspan=$rowspan style='vertical-align: middle;text-align: center;'>删除</td>" + "</tr>");
                 });
               $(".cell").click(function(){
                 var $this = $(this);
-                var userId = $this.prev().prev().prev().text();
-                var result = confirm("确定删除用户："+$this.prev().prev().text()+"？");
+                var Id = $this.prev().prev().prev().text();
+                var result = confirm("确定删除id为："+$this.prev().prev().prev().text()+"的记录？");
                 if (result == true) {
-                    deleteUser(userId);
+                    deleteOneDate(type,Id);
                     $this.parent().parent().empty();    //清空整个表格
                 }
               }
@@ -55,21 +85,103 @@
         }
 </script>
 
-<script>
-    function deleteUser(userId) {
-        $.getJSON("http://localhost:8080/Controller?type=deleteUser&userId="+userId,
+<script type="text/javascript">
+    function addDataList(type,pageNum){
+        var $this = $(this);
+        $.getJSON(localUrl+type+"&pageNum="+pageNum,
             function(data){
-                showUserList();
+                var array = data["identity"];
+                //如果返回数据少于10，则说明这是最后一页
+                if(array.length<10){
+                    anyMore = false;
+                }
+                $.each(array, function (index, element) {
+                    var button = $("<button type='button' class='btn btn-default'>index</button>");
+                    $("tbody").append("<tr><td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + element[param[0]] + "</td>" +
+                        "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + element[param[1]] + "</td>" +
+                        "<td rowspan=$rowspan style='vertical-align: middle;text-align: center;'>" + element[param[2]] + "</td>"+
+                        "<td class='cell' rowspan=$rowspan style='vertical-align: middle;text-align: center;'>删除</td>" + "</tr>");
+                });
+                $(".cell").click(function(){
+                        var $this = $(this);
+                        var id = $this.prev().prev().prev().text();
+                        var result = confirm("确定删除id为："+$this.prev().prev().prev().text()+"的记录？");
+                        if (result == true) {
+                            deleteOneDate(type,id);
+                            $this.parent().parent().empty();    //清空整个表格
+                        }
+                    }
+                );
+            });
+    }
+</script>
+
+<!--删除一条记录-->
+<script>
+    function deleteOneDate(type,id) {
+        var deleteUrl;
+        switch (type){
+            case "users":deleteUrl =localUrl+"deleteUser&userId=";break;
+            case "groups":deleteUrl =localUrl+"deleteGroup&groupId=";break;
+            case "userGroups":deleteUrl =localUrl+"deleteUserGroup&id=";break;
+            default:break;
+        }
+        $.getJSON(deleteUrl + id,
+            function(data){
+                showDataList(type);
                 var array = data["state"];
             });
     }
 </script>
 
+<!--滚动到最底端时触发-->
+<script type="text/javascript">
+    $(document).ready(function(){
+        $(window).scroll(function() {
+            if(anyMore){
+                if ($(document).scrollTop() >= $(document).height() - $(window).height())
+                    addDataList(type,++pageNum);
+                }else {
+                    $("#label").show();
+                }
+            });
+    });
+</script>
 
-<div class="btn-group btn-group-justified">
-    <button type="button" id="user" class="btn btn-default">用户</button>
-    <button type="button" id="group" class="btn btn-default">群组</button>
-    <button type="button" id="user_group" class="btn btn-default">关系表</button>
+<script>
+    function initTableParam(type) {
+        switch (type){
+            case "users":
+                title[0]="用户ID";title[1]="用户名称";title[2]="手机号";
+                param[0]="id";param[1]="userName";param[2]="mobile";
+                break;
+            case "groups":
+                title[0]="群组ID";title[1]="群组名称";title[2]="管理员ID";
+                param[0]="id";param[1]="groupName";param[2]="managerId";
+                break;
+            case "userGroups":
+                title[0]="关系表ID";title[1]="用户ID";title[2]="群组ID";
+                param[0]="id";param[1]="userId";param[2]="groupId";
+                break;
+            default:
+                title[0]="用户ID";title[1]="用户名称";title[2]="手机号";
+                param[0]="id";param[1]="userName";param[2]="mobile";
+                break;
+        }
+    }
+</script>
+
+
+<div class="btn-group" data-toggle="buttons">
+    <label class="btn btn-default btn-lg ">
+        <input type="radio" name="options" id="option1">查询用户
+    </label>
+    <label class="btn btn-default btn-lg ">
+        <input type="radio" name="options" id="option2">查询群组
+    </label>
+    <label class="btn btn-default btn-lg ">
+        <input type="radio" name="options" id="option3">查询关系表
+    </label>
 </div>
 
 <div class="container">
@@ -80,5 +192,8 @@
     </thead>
   </table>
 </div>
+
+<span class="label label-warning" id="label">没有更多数据了..</span>
+
 </body>
 </html>

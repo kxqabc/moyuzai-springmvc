@@ -7,8 +7,15 @@ import java.util.List;
 
 public interface UserGroupDao {
     /**查询关系表*/
+
+    List<UserGroup> queryAll(@Param(value = "offset")int offset,
+                             @Param(value = "limit")int limit);
+
     UserGroup queryUserGroup(@Param("groupId")long groupId,
                              @Param("userId")long userId);
+
+    int queryAmountInGroupByGroupId(@Param("groupId")long groupId);
+
     /**新增一个关系表内容*/
     int saveUserGroup(@Param("groupId")long groupId,
                       @Param("userId")long userId);
@@ -16,6 +23,8 @@ public interface UserGroupDao {
     /**去除一个关系表内容*/
     int deleteUserGroup(@Param("groupId")long groupId,
                         @Param("userId")long userId);
+
+    int deleteUserGroupById(@Param("id")long id);
 
     List<Long> queryAllUserIdOfGroup(@Param("groupId")long groupId);
 

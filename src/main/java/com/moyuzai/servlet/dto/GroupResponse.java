@@ -9,20 +9,17 @@ import com.moyuzai.servlet.enums.MyEnum;
 public class GroupResponse {
     private boolean state;
     private Group group;
-    private String managerName;
 
     public GroupResponse() {
     }
 
     public GroupResponse(MyEnum myEnum) {
         this.state = myEnum.isState();
-        this.managerName = myEnum.getStateInfo();
     }
 
-    public GroupResponse(boolean state, Group group, String managerName) {
+    public GroupResponse(boolean state, Group group) {
         this.state = state;
         this.group = group;
-        this.managerName = managerName;
     }
 
     public boolean isState() {
@@ -41,11 +38,4 @@ public class GroupResponse {
         this.group = group;
     }
 
-    public String getManagerName() {
-        return managerName;
-    }
-
-    public void setManagerName(String managerName) {
-        this.managerName = managerName;
-    }
 }

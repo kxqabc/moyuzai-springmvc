@@ -11,6 +11,7 @@ import com.moyuzai.servlet.entity.UserGroup;
 import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.exception.AddPicIdErrorException;
 import com.moyuzai.servlet.exception.AddUserToGroupErrorException;
+import com.moyuzai.servlet.exception.DeleteUserException;
 import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,20 @@ public class UserGroupServiceImpl implements UserGroupService {
     private UserService userService;
     @Autowired
     private GroupService groupService;
+
+    @Override
+    public UsersResponse getAll(int offset, int limit) {
+        List<UserGroup> userGroups = userGroupDao.queryAll(offset,limit);
+        if (userGroups == null || "".equals(userGroups) || userGroups.size() == 0)
+            return new UsersResponse(MyEnum.USER_NOT_FOUND);
+        else
+            return new UsersResponse(MyEnum.GET_USER_SUCCESS, userGroups);
+    }
+
+    @Override
+    public int getAmountInGroupById(long groupId) {
+        return userGroupDao.queryAmountInGroupByGroupId(groupId);
+    }
 
     /**
      * 加入群组
@@ -157,7 +172,7 @@ public class UserGroupServiceImpl implements UserGroupService {
 
 
     /**
-     * 将用户集合一个个的添加入某群组中
+     * 将用户集合一个个的添加入某群组中并添加群组头像
      * @param userIdSet
      * @param managerId
      * @param groupName
@@ -165,39 +180,61 @@ public class UserGroupServiceImpl implements UserGroupService {
      * @return
      */
     @Override
-    public UsersResponse addUserToGroup(Set<Long> userIdSet, long managerId, String groupName, int picId)
+    public UsersResponse addUserPicToGroup(Set<Long> userIdSet, long managerId, String groupName, int picId)
     throws AddPicIdErrorException,AddUserToGroupErrorException{
         Group group = groupDao.queryByGroupNameManagerId(groupName,managerId);
         long groupId = group.getId();
         /**添加群组头像*/
         try {
-            int isAdded = groupDao.addGroupPic(groupId,picId);
+            int isAdded = groupDao.updateGroupPic(groupId,picId);
         }catch (Exception e){
             throw new AddPicIdErrorException("添加群组头像失败！");
         }
-        int resultCount;
+        /**将管理者选择的用户加入该群组*/
+        addUsersToGroup(userIdSet,groupId);
+        return new UsersResponse(MyEnum.CREATE_GROUP_SUCCESS,groupName+"("+groupId+")");  //如果顺利执行到此处，则说明全部加入群组成功！
+    }
+
+    /**
+     * 将管理者选择的用户加入该群组
+     * @param userIdSet
+     * @param groupId
+     */
+    @Override
+    public void addUsersToGroup(Set<Long> userIdSet,long groupId)
+    throws AddUserToGroupErrorException{
         Iterator<Long> iterator = userIdSet.iterator();
         /**将管理者选择的用户加入该群组*/
         while (iterator.hasNext()) {
             try {
-                resultCount = userGroupDao.saveUserGroup(groupId, iterator.next());
+                userGroupDao.saveUserGroup(groupId, iterator.next());
             }catch (Exception e){
                 throw new AddUserToGroupErrorException("用户加入群组出现错误！");
             }
-            /**如果加入群组成功，将用户id从userIdSet中除去*/
-//            iterator.remove();      //如果加入群组成功，将用户id从userIdSet中除去
         }
-        return new UsersResponse(MyEnum.CREATE_GROUP_SUCCESS,groupName+"("+groupId+")");  //如果顺利执行到此处，则说明全部加入群组成功！
-        /**如果set中仍有剩余，说明仍有部分用户没有加入成功*/
-//        if (userIdSet.size()>0){
-//            StringBuffer remainUsers = new StringBuffer();  //残余未成功添加的用户id，使用“，”隔开
-//            for (long userId:userIdSet){
-//                remainUsers.append(userId+",");
-//            }
-//            return new UsersResponse(MyEnum.REMAIN_USERS);
-//        }else {
-//            return new UsersResponse(MyEnum.CREATE_GROUP_SUCCESS);
-//        }
+    }
+
+    @Override
+    public void deleteUsersOfGroup(Set<Long> userIdSet, long groupId)
+    throws DeleteUserException{
+        Iterator<Long> iterator = userIdSet.iterator();
+        /**将管理者选择的用户踢出该群组*/
+        while (iterator.hasNext()) {
+            try {
+                userGroupDao.deleteUserGroup(groupId, iterator.next());
+            }catch (Exception e){
+                throw new DeleteUserException("踢出用户错误异常！");
+            }
+        }
+    }
+
+    @Override
+    public UsersResponse deleteUsersOfGroup(long id) {
+        int result = userGroupDao.deleteUserGroupById(id);
+        if (result>0)
+            return new UsersResponse(MyEnum.DELETE_USER_SUCCESS);
+        else
+            return new UsersResponse(MyEnum.DELETE_USER_FAIL);
     }
 
 }
