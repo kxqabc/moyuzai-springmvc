@@ -256,6 +256,11 @@ public class GroupServiceImpl implements GroupService{
 
     @Override
     public UsersResponse deleteGroup(long managerId, long groupId) {
+        //首先确定群组是否存在
+        boolean groupIsExist = checkGroupIsExist(groupId);
+        if (!groupIsExist)
+            return new UsersResponse(MyEnum.GROUP_IS_NOT_EXIST);
+        //删除群组，因为外键
         int effectCount = groupDao.deleteGroup(managerId,groupId);
         if (effectCount>0)
             return new UsersResponse(MyEnum.DISMISS_GROUP_SUCCESS);

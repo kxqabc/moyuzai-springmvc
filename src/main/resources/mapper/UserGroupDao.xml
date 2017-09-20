@@ -30,12 +30,17 @@
     </select>
 
     <update id="updateOfflineTextUnique">
-        UPDATE user_group set offlineText=#{text} where groupId=#{groupId} and
+        UPDATE user_group SET offlineText=#{text} WHERE groupId=#{groupId} AND
          userId=#{userId}
     </update>
 
     <update id="updateOfflineTextMulti">
-        UPDATE user_group set offlineText='' where userId=#{userId}
+        UPDATE user_group SET offlineText='' WHERE userId=#{userId}
+    </update>
+
+    <update id="addToOfflineText">
+        UPDATE user_group SET offlineText = concat(offlineText,#{text}) WHERE groupId=#{groupId} AND
+         userId=#{userId}
     </update>
 
     <insert id="saveUserGroup" parameterType="long">

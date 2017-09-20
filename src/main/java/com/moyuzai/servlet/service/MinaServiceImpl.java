@@ -45,7 +45,7 @@ public class MinaServiceImpl implements MinaService{
     public void notifyUserIsPulledIntoGroup(Set<Long> userIdSet,String groupName,UsersResponse usersResponse) {
         String groupInfo = (String)usersResponse.getIdentity();     //从dto中取出群组信息：ID和名称
         long groupId = Long.parseLong(groupInfo.substring(groupInfo.indexOf("(") + 1, groupInfo.indexOf(")")));     //从群组信息中获取群组ID
-        Group group = groupDao.queryById(groupId);
+        Group group = groupDao.queryGroupWithManNameById(groupId);
         int userAmount = userGroupDao.queryAmountInGroupByGroupId(groupId);   //获取群人数
         group.setAmount(userAmount);
         String groupJSON = DataFormatTransformUtil.objectToJson(group);

@@ -1,5 +1,6 @@
 package com.moyuzai.servlet.mina.model;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,16 +34,19 @@ public class LoginModel {
 	}
 
 	public void handle(UserService userService, UserGroupService userGroupService) {
+		logger.info("进入login.handle..");
 		//登录回执
 		MessageProtoBuf.ProtoMessage loginResponse;
 
 		String from = mProtoMessage.getFrom();
 		long userId = Long.parseLong(from.substring(from.indexOf("(") + 1, from.indexOf(")")));
+		logger.info("from:"+from+",userId:"+userId);
 		if (!userService.isUserExist(userId)){		//用户信息不正确
 			//不正常的登录回执
 			loginResponse = DataFormatTransformUtil.packingToProtoMessage(MessageProtoBuf.ProtoMessage.Type.LOGIN_RESPONSE,
 					"server","","error");
 			mSession.write(loginResponse);
+			logger.info("mina登录失败！");
 		}else {					//用户信息正确，正常登录
 			mSessionMap.put(userId, mSession);
 			logger.info("在线用户数量="+mSessionMap.size());

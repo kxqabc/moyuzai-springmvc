@@ -37,6 +37,11 @@ public interface UserGroupDao {
     int updateOfflineTextUnique(@Param("text") String text,
                           @Param("userId") long userId,
                           @Param("groupId") long groupId);
+    //追加一条离线信息
+    int addToOfflineText(@Param("text")String text,
+                         @Param("userId") long userId,
+                         @Param("groupId") long groupId);
+
     /**一次更新多条离线信息（属于同一用户下）*/
     int updateOfflineTextMulti(@Param("text") String text,
                           @Param("userId") long userId);

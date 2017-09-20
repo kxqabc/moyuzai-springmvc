@@ -1,10 +1,11 @@
 package com.moyuzai.servlet.mina.util;
 
 import com.moyuzai.servlet.mina.entity.ChatMessage;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class MessageParser {
-	public static ChatMessage parse(String message) {
+	public static ChatMessage parse(String message) throws JSONException {
 		ChatMessage chatMessage = null;
 		JSONObject jsonObject =new JSONObject(message);
 		String type;

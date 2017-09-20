@@ -2,11 +2,7 @@ package com.moyuzai.servlet.mina.coder;
 
 import org.apache.mina.core.buffer.IoBuffer;
 import org.apache.mina.core.session.IoSession;
-import org.apache.mina.filter.codec.ProtocolCodecFactory;
-import org.apache.mina.filter.codec.ProtocolDecoder;
-import org.apache.mina.filter.codec.ProtocolDecoderOutput;
-import org.apache.mina.filter.codec.ProtocolEncoder;
-import org.apache.mina.filter.codec.ProtocolEncoderOutput;
+import org.apache.mina.filter.codec.*;
 
 import proto.MessageProtoBuf.ProtoMessage;
 
@@ -34,12 +30,14 @@ public class MessageCodeFactory implements ProtocolCodecFactory {
 		@Override
 		public void encode(IoSession session, Object message, ProtocolEncoderOutput out) throws Exception {
 			ProtoMessage protoMessage = (ProtoMessage) message;
+			System.out.println("encode:"+((ProtoMessage) message).getBody());
 			byte[] bytes = protoMessage.toByteArray();
 			IoBuffer ioBuffer = IoBuffer.allocate(bytes.length);
 			ioBuffer.setAutoExpand(true);
 			ioBuffer.put(bytes);
 			ioBuffer.flip();
 			out.write(ioBuffer);
+			System.out.println("encode:after send");
 		}
 
 		@Override
@@ -49,14 +47,14 @@ public class MessageCodeFactory implements ProtocolCodecFactory {
 
 	}
 
-	class MyDecoder implements ProtocolDecoder {
-
+	class MyDecoder extends CumulativeProtocolDecoder {
 		@Override
-		public void decode(IoSession session, IoBuffer in, ProtocolDecoderOutput out) throws Exception {
+		protected boolean doDecode(IoSession ioSession, IoBuffer in, ProtocolDecoderOutput out) throws Exception {
 			byte[] bytes = new byte[in.limit()];
 			in.get(bytes);
 			ProtoMessage protoMessage = ProtoMessage.parseFrom(bytes);
 			out.write(protoMessage);
+			return true;
 		}
 
 		@Override

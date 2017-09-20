@@ -13,6 +13,8 @@ import com.moyuzai.servlet.exception.AddPicIdErrorException;
 import com.moyuzai.servlet.exception.AddUserToGroupErrorException;
 import com.moyuzai.servlet.exception.DeleteUserException;
 import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import proto.MessageProtoBuf;
@@ -123,39 +125,61 @@ public class UserGroupServiceImpl implements UserGroupService {
         return userIds;
     }
 
+    /**
+     * 插入消息
+     * @param protoMessage
+     * @param userId
+     * @param groupId
+     * @return
+     */
     @Override
     public int insertOfflineText(MessageProtoBuf.ProtoMessage protoMessage, long userId, long groupId) {
         JsonFormat jsonFormat = new JsonFormat();       //maven中这个jar包没有导入成功!
         String json = jsonFormat.printToString(protoMessage);//将protoMessage转换为String
-        String newOfflineText = userGroupDao.getOfflineTextUnique(userId,groupId) + json + ",";     //将之前的离线消息和新消息合并起来
-        int result = userGroupDao.updateOfflineTextUnique(newOfflineText,userId,groupId);
-        return result;
+        int effectCount = userGroupDao.addToOfflineText(json+",",userId,groupId);           //追加信息
+        return effectCount;
     }
 
+    /**
+     * 获取用户id为userId的所有群组的离线信息
+     * @param userId
+     * @return
+     */
     @Override
     public List<MessageProtoBuf.ProtoMessage> getOfflineText(long userId) {
+        //Protobuf工具
         JsonFormat jsonFormat = new JsonFormat();
         MessageProtoBuf.ProtoMessage.Builder builder = MessageProtoBuf.ProtoMessage.newBuilder();
         ExtensionRegistry registry = ExtensionRegistry.newInstance();;
 
-        List<MessageProtoBuf.ProtoMessage> outPut = new ArrayList<>();
-        List<String> jsonList = new ArrayList<>();
-        List<String> results = userGroupDao.getOfflineTextMulti(userId);
-        StringBuffer stringBuffer;  //拼接results数组为一个json格式。(这里必须用stringbuffer，因为直接在循环体内拼接的话，相当于每次都要new出一个新的stringbuffer，造成浪费！)
+        List<MessageProtoBuf.ProtoMessage> outPut = new ArrayList<>();      //将List<String>包装成List<MessageProtoBuf.ProtoMessage>输出
+        List<String> jsonList = new ArrayList<>();                          //保存的JSON LIST
+        List<String> results = userGroupDao.getOfflineTextMulti(userId);    //得到多个组的离线信息，列表中每个元素代表一个群组中的离线消息
+        StringBuffer stringBuffer;      //拼接results数组为一个json格式。(这里最好用stringbuffer，因为直接在循环体内拼接的话，相当于每次都要new出一个新的stringbuffer，造成浪费！)
         if (results==null||results.isEmpty()||results.size()==0){
             return null;
         }else {
             stringBuffer = new StringBuffer();
             stringBuffer.append("[");
-            for (String s:results){
+            for (String s:results){     //s1:{xx},{xx},   s2:{xx},{xx},  --> s1+s2={xx},{xx},{xx},{xx},
                 stringBuffer.append(s);
             }
             stringBuffer.append("]");
         }
-        JSONArray jsonArray = new JSONArray(stringBuffer.toString());
-        for (Object j:jsonArray){
-            jsonList.add(j.toString());
+        JSONArray jsonArray;
+        try {
+            jsonArray = new JSONArray(stringBuffer.toString());
+            int length = jsonArray.length();
+            Object json;
+            for (int i=0;i<length;i++){
+                json = jsonArray.get(i);
+                if ((json != null)&&(!"".equals(json)))
+                    jsonList.add(json.toString());
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
+
         for (String js:jsonList){
             try {
                 jsonFormat.merge(js,registry,builder);

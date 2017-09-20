@@ -43,7 +43,8 @@
                 <entry key="codec">
                     <bean class="org.apache.mina.filter.codec.ProtocolCodecFilter">
                         <constructor-arg>
-                            <bean class="com.moyuzai.servlet.mina.coder.MessageCodeFactory"/>
+                            <bean class="org.apache.mina.filter.codec.serialization.ObjectSerializationCodecFactory"></bean>
+                            <!--<bean class="com.moyuzai.servlet.mina.coder.MessageCodeFactory"/>-->
                             <!--<bean class="org.apache.mina.filter.codec.textline.TextLineCodecFactory" />-->
                         </constructor-arg>
                     </bean>

@@ -358,6 +358,7 @@ public class MyController {
     public UsersResponse dismissGroup(@RequestParam(value = "managerId")long managerId,
                                       @RequestParam(value = "groupId")long groupId){
         logger.info("解散群组。。");
+        //解散群组之前应该先记录组员
         return groupService.deleteGroup(managerId,groupId);
     }
 
