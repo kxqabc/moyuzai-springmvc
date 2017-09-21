@@ -89,13 +89,13 @@ public class ServerHandler extends IoHandlerAdapter {
 	 * @param userIds
 	 * @param groupId
 	 * @param protoMessage
-	 * @param userGroupService
 	 */
-	public void pulledIntoGroupNotify(Set<Long> userIds,
+	public void notifyAllUsers(Set<Long> userIds,
 									  long groupId,
-									  MessageProtoBuf.ProtoMessage protoMessage,
-									  UserGroupService userGroupService){
+									  MessageProtoBuf.ProtoMessage protoMessage){
 		log.info("开始通知所有组员已经被拉入该群组, "+"users="+userIds.toString());
+		if (userIds.isEmpty())
+			return;
 		for (long userId:userIds){
 			if (sessionMap.containsKey(userId)){	//表示在线
 				log.info("用户："+userId+"在线,立即推送。。");
@@ -127,15 +127,21 @@ public class ServerHandler extends IoHandlerAdapter {
 				}else {
 					//获取之前的离线信息
 					List<MessageProtoBuf.ProtoMessage> oldMessageList = userGroupService.getOfflineText(userId);
-					oldMessageList.add(protoMessage);
-					//将解散消息存放在该用户的其他群组的离线信息中，考虑之前该组的离线信息
-					for (MessageProtoBuf.ProtoMessage message:oldMessageList){
-						userGroupService.insertOfflineText(message,userId,insertedGroup.getGroupId());
+					//如果没有其他离线消息，就只保存这条
+					if (oldMessageList == null || "".equals(oldMessageList) || oldMessageList.size()==0){
+						userGroupService.insertOfflineText(protoMessage,userId,insertedGroup.getGroupId());
+					}else {
+						oldMessageList.add(protoMessage);
+						//将解散消息存放在该用户的其他群组的离线信息中，考虑之前该组的离线信息
+						for (MessageProtoBuf.ProtoMessage message:oldMessageList){
+							userGroupService.insertOfflineText(message,userId,insertedGroup.getGroupId());
+						}
 					}
 				}
 			}
 		}
 	}
+
 
 	public Map<Long, IoSession> getSessionMap() {
 		return sessionMap;

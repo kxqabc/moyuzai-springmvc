@@ -10,6 +10,8 @@ public interface UserGroupService {
 
     UsersResponse getAll(int offset, int resultCount);
 
+    int getGroupAmountByUserId(long userId);
+
     int getAmountInGroupById(long groupId);
 
     UsersResponse joinGroup(long userId, long groupId);

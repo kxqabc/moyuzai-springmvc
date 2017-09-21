@@ -219,11 +219,17 @@
       <version>1.3</version>
     </dependency>
 
-    <!--jsonArray导入失败-->
+    <!--jsonArray-->
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
       <version>20070829</version>
+    </dependency>
+<!--gson-->
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.8.1</version>
     </dependency>
 
   </dependencies>

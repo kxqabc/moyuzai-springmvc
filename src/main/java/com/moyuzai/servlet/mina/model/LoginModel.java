@@ -53,12 +53,19 @@ public class LoginModel {
 			//正常的登录回执
 			loginResponse = DataFormatTransformUtil.packingToProtoMessage(MessageProtoBuf.ProtoMessage.Type.LOGIN_RESPONSE,
 					"server","","ok");
-			WriteFuture writeFuture = mSession.write(DataFormatTransformUtil.packingToProtoMessage(MessageProtoBuf.ProtoMessage.Type.LOGIN_RESPONSE,
-					"server","","ok"));
+			mSession.write(loginResponse);
 			//查询离线信息
 			List<MessageProtoBuf.ProtoMessage> offlineTextList = userGroupService.getOfflineText(userId);
 			if (offlineTextList == null||offlineTextList.equals("")||offlineTextList.isEmpty()) {
 				logger.info("用户:" + userId + "没有离线信息");
+				//查询下用户是不是一个群组都没有了
+				int groupAmount = userGroupService.getGroupAmountByUserId(userId);
+				if (groupAmount==0){
+					//通知用户一个群组也没有了
+					MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessage(
+							MessageProtoBuf.ProtoMessage.Type.NO_GROUP_NOTIFY,"","","ok");
+					mSession.write(message);
+				}
 			} else {
 				logger.info("存在未推送信息！offlineTextList.size="+offlineTextList.size());
 				for (MessageProtoBuf.ProtoMessage protoMessage: offlineTextList) {

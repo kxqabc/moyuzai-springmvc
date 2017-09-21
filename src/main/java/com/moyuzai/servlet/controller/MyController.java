@@ -293,7 +293,7 @@ public class MyController {
                 if (userIdSet.contains(managerId))
                     userIdSet.remove(managerId);
                 //通知其他人
-                minaService.notifyUserIsPulledIntoGroup(userIdSet,groupName,usersResponse);
+                minaService.notifyUserIsPulledIntoGroup(userIdSet,usersResponse);
             }
             return usersResponse;       //创建成功，返回成功信息的dto
         }catch (CreateGroupErrorException e1){      //创建不带初始化信息的群组失败
@@ -303,6 +303,7 @@ public class MyController {
         }catch (AddUserToGroupErrorException e3){   //将用户添加入群组时出现错误
             return new UsersResponse(MyEnum.REMAIN_USERS);
         }catch (Exception e){                       //内部错误
+            logger.info(e.getMessage());
             return new UsersResponse(MyEnum.INNER_REEOR);
         }
     }
@@ -344,7 +345,12 @@ public class MyController {
     public UsersResponse signoutFromGroup(@RequestParam(value = "userId")long userId,
                                           @RequestParam(value = "groupId")long groupId){
         logger.info("退出群组。。");
-        return userGroupService.signoutFromGroup(userId,groupId);
+        UsersResponse usersResponse = userGroupService.signoutFromGroup(userId,groupId);
+        //通知其他人有人退出群组
+        if (usersResponse.isState()){
+            minaService.notifySomeOut(groupId,userId);
+        }
+        return usersResponse;
     }
 
     /**
@@ -378,9 +384,9 @@ public class MyController {
                     managerId,picId,groupName,addUsers,minusUsers);
             //如果操作成功，通知群内其他所有人
             if (usersResponse.isState()){
-//                minaService.
+                //通过mina通知所有人
+                minaService.notifyUsersGroupMessageChange(groupId,managerId,groupName,picId);
             }
-            //成功的回复
             return usersResponse;
         }catch (AddPicIdErrorException e1){
             return new UsersResponse(MyEnum.ADD_GROUP_PIC_FAIL);

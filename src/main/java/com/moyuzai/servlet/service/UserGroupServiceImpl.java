@@ -37,6 +37,8 @@ public class UserGroupServiceImpl implements UserGroupService {
     private UserService userService;
     @Autowired
     private GroupService groupService;
+    @Autowired
+    private MinaService minaService;
 
     @Override
     public UsersResponse getAll(int offset, int limit) {
@@ -45,6 +47,11 @@ public class UserGroupServiceImpl implements UserGroupService {
             return new UsersResponse(MyEnum.USER_NOT_FOUND);
         else
             return new UsersResponse(MyEnum.GET_USER_SUCCESS, userGroups);
+    }
+
+    @Override
+    public int getGroupAmountByUserId(long userId) {
+        return userGroupDao.queryGroupAmountByUserId(userId);
     }
 
     @Override
@@ -65,14 +72,17 @@ public class UserGroupServiceImpl implements UserGroupService {
         boolean isGroupExist = groupService.checkGroupIsExist(groupId);
         if (!isUserExist || !isGroupExist)
             return new UsersResponse(MyEnum.GROUP_USER_INFO_ERROR);
-        /**判断用户是否已经加入群组，放置重复加入同一个群组*/
+        /**判断用户是否已经加入群组，防止重复加入同一个群组*/
         boolean isJoined = isJoined(groupId,userId);
         if (isJoined)
             return new UsersResponse(MyEnum.IS_JOINED);
         /**执行加入动作*/
         int resultCount = userGroupDao.saveUserGroup(groupId,userId);
-        if (resultCount>0)
+        if (resultCount>0){
+            //通知其他人有人加入该群组
+            minaService.notifySomeJoined(groupId,userId);
             return new UsersResponse(MyEnum.JOIN_GROUP_SUCCESS);
+        }
         else
             return new UsersResponse(MyEnum.JOIN_GROUP_FAIL);
     }
@@ -93,6 +103,8 @@ public class UserGroupServiceImpl implements UserGroupService {
         int resultCount = userGroupDao.deleteUserGroup(groupId,userId);
         if (resultCount>0){
             MyEnum.SIGNOUT_SUCCESS.setStateInfo("退出群"+groupId+"成功！");
+            //通知其他人有人退群了
+
         }else{
             MyEnum.SIGNOUT_GROUP_FAIL.setStateInfo("退出群"+groupId+"失败！");
         }

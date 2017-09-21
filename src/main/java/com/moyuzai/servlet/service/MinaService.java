@@ -11,10 +11,14 @@ public interface MinaService {
     boolean isOnline(long userId);
 
     void notifyUserIsPulledIntoGroup(Set<Long> userIdSet,
-                                     String groupName,
                                      UsersResponse usersResponse);
 
     void notifyUserGroupIsDisMissed(Set<Long> userIdSet,long groupId);
 
-    void notifyUsersGroupMessageChange(long groupId);
+    void notifyUsersGroupMessageChange(long groupId,long managerId,String groupName,int picId);
+
+    void notifySomeJoined(long groupId,long userId);
+
+    void notifySomeOut(long groupId,long userId);
+
 }
