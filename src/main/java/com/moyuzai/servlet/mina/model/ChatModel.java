@@ -49,13 +49,11 @@ public class ChatModel {
 		if (!isAccess){		//没有通过检验
 			logger.info("发送群聊消息检验：群组ID错误或用户不在该群组中！");
 			//服务器聊天核对失败回执
-			chatResponse = DataFormatTransformUtil.packingToProtoMessage(MessageProtoBuf.ProtoMessage.Type.CHAT_RESPONSE,
-					"server","","error");
+			chatResponse = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.CHAT_RESPONSE, "error");
 			mSession.write(chatResponse);
 		}else {				//成功通过检验
 			//服务器聊天核对成功回执
-			chatResponse = DataFormatTransformUtil.packingToProtoMessage(MessageProtoBuf.ProtoMessage.Type.CHAT_RESPONSE,
-					"server","","ok");
+			chatResponse = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.CHAT_RESPONSE, "ok");
 			mSession.write(chatResponse);
 
 			List<Long> userIdList = userGroupService.queryAllUserIdOfGroup(groupId);

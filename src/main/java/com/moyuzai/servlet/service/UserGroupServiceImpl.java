@@ -7,6 +7,7 @@ import com.moyuzai.servlet.dao.UserDao;
 import com.moyuzai.servlet.dao.UserGroupDao;
 import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.Group;
+import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.entity.UserGroup;
 import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.exception.AddPicIdErrorException;
@@ -59,6 +60,15 @@ public class UserGroupServiceImpl implements UserGroupService {
         return userGroupDao.queryAmountInGroupByGroupId(groupId);
     }
 
+    @Override
+    public UsersResponse getUsersOfGroup(long groupId) {
+        List<User> users = userGroupDao.queryUsersBYGroupId(groupId);
+        if (users==null || "".equals(users) || users.size()==0)
+            return new UsersResponse(MyEnum.USER_NOT_FOUND);
+        else
+            return new UsersResponse(MyEnum.GET_USER_SUCCESS,users);
+    }
+
     /**
      * 加入群组
      * @param userId
@@ -79,8 +89,6 @@ public class UserGroupServiceImpl implements UserGroupService {
         /**执行加入动作*/
         int resultCount = userGroupDao.saveUserGroup(groupId,userId);
         if (resultCount>0){
-            //通知其他人有人加入该群组
-            minaService.notifySomeJoined(groupId,userId);
             return new UsersResponse(MyEnum.JOIN_GROUP_SUCCESS);
         }
         else
@@ -124,6 +132,15 @@ public class UserGroupServiceImpl implements UserGroupService {
             return false;
         else
             return true;
+    }
+
+    @Override
+    public boolean isJoined(long groupId, Set<Long> userSet) {
+        for (long userId:userSet){
+            if (!isJoined(groupId,userSet))
+                return false;
+        }
+        return true;
     }
 
     /**
@@ -258,7 +275,9 @@ public class UserGroupServiceImpl implements UserGroupService {
         /**将管理者选择的用户踢出该群组*/
         while (iterator.hasNext()) {
             try {
-                userGroupDao.deleteUserGroup(groupId, iterator.next());
+                int deleteCount = userGroupDao.deleteUserGroup(groupId, iterator.next());
+                if (deleteCount==0)
+                    throw new DeleteUserException("踢出用户错误异常！");
             }catch (Exception e){
                 throw new DeleteUserException("踢出用户错误异常！");
             }

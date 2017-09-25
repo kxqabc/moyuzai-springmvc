@@ -19,7 +19,7 @@
     </select>
 
     <select id="queryGroupWithManNameById" parameterType="long" resultMap="groupWithManName">
-        SELECT *
+        SELECT g.id,g.groupName,g.managerId,g.picId,u.userName
         FROM groups g INNER JOIN users u ON u.id = g.managerId
         WHERE g.id = #{groupId}
     </select>

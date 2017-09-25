@@ -17,10 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class GroupServiceImpl implements GroupService{
@@ -106,7 +103,7 @@ public class GroupServiceImpl implements GroupService{
     }
 
     /**
-     * 更改群组资料，包括群组头像、群组名称、增减用户
+     * 更改群组资料，包括群组头像、群组名称、增减用户(包括事务管理)
      * @param groupId
      * @param managerId
      * @param picId
@@ -129,6 +126,8 @@ public class GroupServiceImpl implements GroupService{
         //不是该组的管理员
         if (!isManagerOfThisGroup)
             return new UsersResponse(MyEnum.NOT_THE_MANAGER_OF_THIS_GROUP);
+        //保存：添加、删除组员ID的集合
+        Map<String,Object> usersMap = new HashMap<>();
         //检验传入参数，确定更改项
         try {
             //检查picId参数是否为空，为空则表示没有修改
@@ -137,18 +136,32 @@ public class GroupServiceImpl implements GroupService{
             //检查groupName参数是否为空
             if (groupName!=null && (!"".equals(groupName)))
                 groupDao.updateGroupName(groupId,groupName);
-            if (addUsers!=null && (!"".equals(addUsers))){
-                Set<Long> addUsersIdSet = DataFormatTransformUtil.StringToLongSet(addUsers);
-                //将users依次加入group中
-                if (addUsersIdSet!=null && (!"".equals(addUsersIdSet) && addUsersIdSet.size()>0 )){
-                    userGroupService.addUsersToGroup(addUsersIdSet,groupId);
-                }
-            }
+            //踢出组员
             if (minusUsers!=null && (!"".equals(minusUsers))){
                 Set<Long> minusUsersIdSet = DataFormatTransformUtil.StringToLongSet(minusUsers);
                 //将users依次踢出group
                 if (minusUsersIdSet!=null && (!"".equals(minusUsersIdSet) && minusUsersIdSet.size()>0 )){
                     userGroupService.deleteUsersOfGroup(minusUsersIdSet,groupId);
+                    //将踢出的用户id集合保存
+                    usersMap.put("minusUsers",minusUsersIdSet);
+                }
+
+            }
+            //获取要通知“群组资料变化”的组员ID
+            List<Long> unTouchedUserIds = userGroupService.queryAllUserIdOfGroup(groupId);
+            //将用户ID保存在dto的identity中
+            if (unTouchedUserIds!=null && (!"".equals(unTouchedUserIds))){
+                Set<Long> unTouchUserSet = new HashSet<>();
+                unTouchUserSet.addAll(unTouchedUserIds);
+                unTouchedUserIds.remove(managerId);
+                usersMap.put("unAffectedUsers",unTouchUserSet);
+            }
+            if (addUsers!=null && (!"".equals(addUsers))){
+                Set<Long> addUsersIdSet = DataFormatTransformUtil.StringToLongSet(addUsers);
+                //将users依次加入group中
+                if (addUsersIdSet!=null && (!"".equals(addUsersIdSet) && addUsersIdSet.size()>0 )){
+                    userGroupService.addUsersToGroup(addUsersIdSet,groupId);
+                    usersMap.put("addUsers",addUsersIdSet);
                 }
             }
         }catch (AddPicIdErrorException e1){
@@ -163,7 +176,7 @@ public class GroupServiceImpl implements GroupService{
             logger.error(e.toString(),e);
             throw new MoyuzaiInnerErrorException("墨鱼仔出现内部错误！");
         }
-        return new UsersResponse(MyEnum.CHANGE_GROUP_DATE_SUCCESS);
+        return new UsersResponse(MyEnum.CHANGE_GROUP_DATE_SUCCESS,usersMap);
     }
 
     @Override
@@ -269,18 +282,14 @@ public class GroupServiceImpl implements GroupService{
         boolean groupIsExist = checkGroupIsExist(groupId);
         if (!groupIsExist)
             return new UsersResponse(MyEnum.GROUP_IS_NOT_EXIST);
-        //获取某群组的所有用户Id
-        List<Long> userIds = userGroupService.queryAllUserIdOfGroup(groupId);
-        Set<Long> userIdSet = new HashSet<>();
-        userIdSet.addAll(userIds);
-        userIdSet.remove(managerId);    //除去管理者，不通知他
+        //确定管理员ID是否正确
+        boolean isManagerOfGroup = isManagerOfThisGroup(groupId,managerId);
+        if (!isManagerOfGroup)
+            return new UsersResponse(MyEnum.NOT_THE_MANAGER_OF_THIS_GROUP);
         //删除群组，因为外键
         int effectCount = groupDao.deleteGroup(managerId,groupId);
-        if (effectCount>0){
-            //通知组内所有人该组解散
-            minaService.notifyUserGroupIsDisMissed(userIdSet,groupId);
+        if (effectCount>0)
             return new UsersResponse(MyEnum.DISMISS_GROUP_SUCCESS);
-        }
         else
             return new UsersResponse(MyEnum.DISMISS_GROUP_FAIL);
     }

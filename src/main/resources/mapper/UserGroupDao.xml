@@ -17,6 +17,12 @@
         SELECT COUNT(*) FROM user_group WHERE userId=#{userId}
     </select>
 
+    <select id="queryUsersBYGroupId" parameterType="long" resultMap="usersList">
+        SELECT u.id,u.userName,u.mobile
+        FROM user_group ug INNER JOIN users u ON u.id = ug.userId
+        WHERE ug.groupId= #{groupId}
+    </select>
+
     <select id="queryAmountInGroupByGroupId" parameterType="long" resultType="int">
         SELECT COUNT(*) FROM user_group WHERE groupId = #{groupId}
     </select>
@@ -69,5 +75,11 @@
         <id column="id" property="id" />
         <result column="userId" property="userId" />
         <result column="groupId" property="groupId" />
+    </resultMap>
+
+    <resultMap id="usersList" type="User">
+        <id column="userId" property="id" />
+        <result column="userName" property="userName"/>
+        <result column="mobile" property="mobile"/>
     </resultMap>
 </mapper>

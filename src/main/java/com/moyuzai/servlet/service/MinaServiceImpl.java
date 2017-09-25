@@ -10,6 +10,8 @@ import com.moyuzai.servlet.mina.core.ServerHandler;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import com.sun.corba.se.impl.interceptors.PICurrent;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import proto.MessageProtoBuf;
@@ -19,6 +21,8 @@ import java.util.*;
 
 @Service
 public class MinaServiceImpl implements MinaService{
+
+    Logger logger = LoggerFactory.getLogger(this.getClass());
 
     //增加本条注释并commit
 
@@ -54,14 +58,17 @@ public class MinaServiceImpl implements MinaService{
     public void notifyUserIsPulledIntoGroup(Set<Long> userIdSet,UsersResponse usersResponse) {
         String groupInfo = (String)usersResponse.getIdentity();     //从dto中取出群组信息：ID和名称
         long groupId = Long.parseLong(groupInfo.substring(groupInfo.indexOf("(") + 1, groupInfo.indexOf(")")));     //从群组信息中获取群组ID
+        notifyUserIsPulledIntoGroup(userIdSet,groupId);
+    }
+    @Override
+    public void notifyUserIsPulledIntoGroup(Set<Long> userIdSet,long groupId){
         Group group = groupDao.queryGroupWithManNameById(groupId);
         int userAmount = userGroupDao.queryAmountInGroupByGroupId(groupId);   //获取群人数
         group.setAmount(userAmount);
         String groupJSON = new Gson().toJson(group);
         /** 使用工具类方法将“普通信息”包装成protoMessage */
-        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessage(
-                MessageProtoBuf.ProtoMessage.Type.JOIN_GROUP_NOTIFY,    //构造ProtoMessage
-                "","",groupJSON);
+        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
+                MessageProtoBuf.ProtoMessage.Type.JOIN_GROUP_NOTIFY, groupJSON);
         /** 调用serverHandler的方法利用socket通知用户 */
         serverHandler.notifyAllUsers(userIdSet,groupId,message);        //通知被拉入的组员
     }
@@ -69,9 +76,8 @@ public class MinaServiceImpl implements MinaService{
     @Override
     public void notifyUserGroupIsDisMissed(Set<Long> userIdSet,long groupId) {
         /** 使用工具类方法将“普通信息”包装成protoMessage */
-        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessage(
-                MessageProtoBuf.ProtoMessage.Type.DISMISS_GROUP_NOTIFY,    //构造ProtoMessage
-                "","",""+groupId);
+        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
+                MessageProtoBuf.ProtoMessage.Type.DISMISS_GROUP_NOTIFY, ""+groupId);
         serverHandler.groupDismissNotify(userIdSet,groupId,message);
     }
 
@@ -79,25 +85,35 @@ public class MinaServiceImpl implements MinaService{
      * 通知其他人群组资料变化
      * @param groupId
      * @param managerId
-     * @param groupName
      * @param picId
      */
     @Override
-    public void notifyUsersGroupMessageChange(long groupId,long managerId,String groupName,int picId) {
-        List<Long> userIds = userGroupService.queryAllUserIdOfGroup(groupId);
-        Set<Long> userIdSet = new HashSet<>();
-        userIdSet.addAll(userIds);
-        userIdSet.remove(managerId);       //不用通知自己
-        if (userIdSet.isEmpty())
+    public void notifyUsersGroupMessageChange(Set<Long> userSet,long groupId,String groupName,long managerId,
+                                              String addUsers,int picId) {
+        if (userSet.isEmpty())
             return;
+        userSet.remove(managerId);       //不用通知自己
         //构造group对象
         int amount = userGroupDao.queryAmountInGroupByGroupId(groupId);
-        Group group = groupDao.queryGroupWithManNameById(groupId);
-        group.setAmount(amount);
-        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessage(
-                MessageProtoBuf.ProtoMessage.Type.UPDATE_GROUP_NOTIFY,"","",new Gson().toJson(group));
+        Map<String,Object> jsonMap = new HashMap<>();
+        jsonMap.put("id",groupId);
+        jsonMap.put("groupName",groupName);
+        jsonMap.put("managerId",managerId);
+        jsonMap.put("picId",picId);
+        jsonMap.put("amount",amount);
+        if (addUsers!=null && (!"".equals(addUsers))){
+            Set<Long> addUserSet = DataFormatTransformUtil.StringToLongSet(addUsers);
+            if (addUserSet != null || (!"".equals(addUserSet))){
+                String addUsersName = userService.getUsersName(addUserSet);
+                jsonMap.put("addUsers",addUsersName.substring(0,addUsersName.length()-1));
+            }
+        }else
+            jsonMap.put("addUsers",null);
+        logger.info(new Gson().toJson(jsonMap));
+        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
+                MessageProtoBuf.ProtoMessage.Type.UPDATE_GROUP_NOTIFY,new Gson().toJson(jsonMap));
         //通知
-        serverHandler.notifyAllUsers(userIdSet,groupId,message);
+        serverHandler.notifyAllUsers(userSet,groupId,message);
     }
 
     /**
@@ -107,22 +123,14 @@ public class MinaServiceImpl implements MinaService{
      */
     @Override
     public void notifySomeJoined(long groupId, long userId) {
-        groupMemberChange(groupId,userId, MessageProtoBuf.ProtoMessage.Type.SOMEONE_JOIN_NOTIFY);
-    }
-
-    @Override
-    public void notifySomeOut(long groupId, long userId) {
-        groupMemberChange(groupId,userId, MessageProtoBuf.ProtoMessage.Type.SOMEONE_QUIT_NOTIFY);
-    }
-
-    public void groupMemberChange(long groupId, long userId, MessageProtoBuf.ProtoMessage.Type type){
-        //得到该群组的所有组员
+        //获取该群组的所有组员
         List<Long> userIds = userGroupService.queryAllUserIdOfGroup(groupId);
         Set<Long> userIdSet = new HashSet<>();
         userIdSet.addAll(userIds);
         userIdSet.remove(userId);       //不用通知自己
         if (userIdSet.isEmpty())
             return;
+        //获取群组中成员的数量
         int usersAmount = userGroupDao.queryAmountInGroupByGroupId(groupId);
         String userName = userDao.queryById(userId).getUserName();
         Map<String,Object> jsonMap = new HashMap<>();
@@ -130,9 +138,23 @@ public class MinaServiceImpl implements MinaService{
         jsonMap.put("userName",userName);
         jsonMap.put("groupId",groupId);
         jsonMap.put("amount",usersAmount);
-        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessage(
-                type, "","",new Gson().toJson(jsonMap));
+        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
+                MessageProtoBuf.ProtoMessage.Type.SOMEONE_JOIN_NOTIFY,new Gson().toJson(jsonMap));
         //通知
         serverHandler.notifyAllUsers(userIdSet,groupId,message);
     }
+
+    /**
+     * 通知已经被踢出该群组
+     * @param userIdSet
+     * @param groupId
+     */
+    @Override
+    public void notifyUsersIsKickout(Set<Long> userIdSet,long groupId) {
+        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
+                MessageProtoBuf.ProtoMessage.Type.QUIT_GROUP_NOTIFY,""+groupId);
+        serverHandler.groupDismissNotify(userIdSet,groupId,message);
+    }
+
+
 }

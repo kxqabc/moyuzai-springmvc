@@ -21,6 +21,8 @@ public interface UserService {
 
     UsersResponse getAllUsers(int offset, int limit);
 
+    String getUsersName(Set<Long> userIdSet);
+
     UsersResponse sendLoginMessage(String mobile,HttpSession httpSession);
 
     UsersResponse sendResetMessage(String mobile,HttpSession httpSession);

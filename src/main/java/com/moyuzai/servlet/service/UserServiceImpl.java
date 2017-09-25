@@ -69,6 +69,19 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
+    public String getUsersName(Set<Long> userIdSet) {
+        if (userIdSet==null||"".equals(userIdSet))
+            return null;
+        StringBuffer userNameString = new StringBuffer();
+        for (long userId:userIdSet){
+            String userName = userDao.queryUserNameById(userId);
+            if (userName!=null&&(!"".equals(userName)))
+                userNameString.append(userName+",");
+        }
+        return userNameString.toString();
+    }
+
+    @Override
     public UsersResponse sendLoginMessage(String mobile,HttpSession httpSession) {
         boolean isRegisted = checkUserByMobile(mobile);     //判断该手机号是否被注册过
         if (isRegisted)

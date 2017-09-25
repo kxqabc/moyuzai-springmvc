@@ -20,6 +20,8 @@ import org.springframework.web.servlet.ModelAndView;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -66,6 +68,7 @@ public class MyController {
             case "deleteGroup":return "forward:/deleteGroupById";
             case "deleteUserGroup":return "forward:/deleteUserGroupById";
             case "GETUSER":return "forward:/getByMobile";
+            case "GETUSERS":return "forward:/getUsersOfGroup";
             case "GETSME":return "forward:/sendLoginMessage";
             case "MATCH":return "forward:/matchCode";
             case "REGISTER":return "forward:/registerUser";
@@ -170,6 +173,12 @@ public class MyController {
         logger.info("mobile in session:"+httpSession.getAttribute("mobile"));
         UsersResponse usersResponse = userService.getUserByMobile(mobile);
         return usersResponse;
+    }
+    @ResponseBody
+    @RequestMapping(value = "/getUsersOfGroup")
+    public UsersResponse getUsersOfGroup(@RequestParam("groupId") long groupId){
+        logger.info("按群组ID查询用户。。");
+        return userGroupService.getUsersOfGroup(groupId);
     }
 
     /**
@@ -331,11 +340,16 @@ public class MyController {
     public UsersResponse joinGroup(@RequestParam(value = "userId")long userId,
                                    @RequestParam(value = "groupId")long groupId){
         logger.info("申请加入群组。。");
-        return userGroupService.joinGroup(userId,groupId);
+        UsersResponse usersResponse = userGroupService.joinGroup(userId,groupId);
+        if (usersResponse.isState()){
+            //通知其他人有人加入该群组
+            minaService.notifySomeJoined(groupId,userId);
+        }
+        return usersResponse;
     }
 
     /**
-     * 退出群组
+     * 主动退出群组
      * @param userId
      * @param groupId
      * @return
@@ -345,12 +359,7 @@ public class MyController {
     public UsersResponse signoutFromGroup(@RequestParam(value = "userId")long userId,
                                           @RequestParam(value = "groupId")long groupId){
         logger.info("退出群组。。");
-        UsersResponse usersResponse = userGroupService.signoutFromGroup(userId,groupId);
-        //通知其他人有人退出群组
-        if (usersResponse.isState()){
-            minaService.notifySomeOut(groupId,userId);
-        }
-        return usersResponse;
+        return userGroupService.signoutFromGroup(userId,groupId);
     }
 
     /**
@@ -364,8 +373,17 @@ public class MyController {
     public UsersResponse dismissGroup(@RequestParam(value = "managerId")long managerId,
                                       @RequestParam(value = "groupId")long groupId){
         logger.info("解散群组。。");
+        UsersResponse usersResponse = groupService.deleteGroup(managerId,groupId);
+        if (usersResponse.isState()){
+            //通知组内所有人该组解散
+            List<Long> userIds = userGroupService.queryAllUserIdOfGroup(groupId);
+            Set<Long> userIdSet = new HashSet<>();
+            userIdSet.addAll(userIds);
+            userIdSet.remove(managerId);    //除去管理者，不通知他
+            minaService.notifyUserGroupIsDisMissed(userIdSet,groupId);
+        }
         //解散群组之前应该先记录组员
-        return groupService.deleteGroup(managerId,groupId);
+        return usersResponse;
     }
 
     @ResponseBody
@@ -381,12 +399,19 @@ public class MyController {
         logger.info("picId:"+picId+",groupName:"+groupName+",users:"+addUsers+"/"+minusUsers);
         try {
             UsersResponse usersResponse = groupService.updateGroupDate(groupId,
-                    managerId,picId,groupName,addUsers,minusUsers);
+                            managerId,picId,groupName,addUsers,minusUsers);
             //如果操作成功，通知群内其他所有人
             if (usersResponse.isState()){
-                //通过mina通知所有人
-                minaService.notifyUsersGroupMessageChange(groupId,managerId,groupName,picId);
+                Map<String,Object> usersMap = (Map<String, Object>) usersResponse.getIdentity();
+                if (usersMap.containsKey("unAffectedUsers"))
+                    minaService.notifyUsersGroupMessageChange((Set<Long>) usersMap.get("unAffectedUsers"),
+                        groupId,groupName,managerId,addUsers,picId);
+                if (usersMap.containsKey("addUsers"))
+                    minaService.notifyUserIsPulledIntoGroup((Set<Long>) usersMap.get("addUsers"),groupId);
+                if (usersMap.containsKey("minusUsers"))
+                    minaService.notifyUsersIsKickout((Set<Long>) usersMap.get("minusUsers"),groupId);
             }
+            usersResponse.setIdentity(null);
             return usersResponse;
         }catch (AddPicIdErrorException e1){
             return new UsersResponse(MyEnum.ADD_GROUP_PIC_FAIL);

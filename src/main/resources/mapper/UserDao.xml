@@ -27,6 +27,9 @@
         SELECT * FROM users ORDER BY id LIMIT #{offset},#{limit}
     </select>
 
+    <select id="queryUserNameById" parameterType="long" resultType="String">
+        SELECT userName FROM users WHERE id = #{userId}
+    </select>
     <!--修改操作-->
     <update id="updateByMobile" parameterType="String" >
         UPDATE users SET password = #{password} WHERE mobile = #{mobile}

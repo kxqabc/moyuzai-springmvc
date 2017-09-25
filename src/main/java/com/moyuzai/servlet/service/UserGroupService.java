@@ -14,11 +14,15 @@ public interface UserGroupService {
 
     int getAmountInGroupById(long groupId);
 
+    UsersResponse getUsersOfGroup(long groupId);
+
     UsersResponse joinGroup(long userId, long groupId);
 
     UsersResponse signoutFromGroup(long userId, long groupId);
 
     boolean isJoined(long groupId,long userId);
+
+    boolean isJoined(long groupId,Set<Long> userSet);
 
     List<Long> queryAllUserIdOfGroup(long groupId);
 

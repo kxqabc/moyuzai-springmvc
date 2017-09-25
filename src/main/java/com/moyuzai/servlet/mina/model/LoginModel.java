@@ -8,7 +8,6 @@ import java.util.Set;
 import com.moyuzai.servlet.service.UserGroupService;
 import com.moyuzai.servlet.service.UserService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
-import org.apache.mina.core.future.WriteFuture;
 import org.apache.mina.core.session.IoSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,16 +42,14 @@ public class LoginModel {
 		logger.info("from:"+from+",userId:"+userId);
 		if (!userService.isUserExist(userId)){		//用户信息不正确
 			//不正常的登录回执
-			loginResponse = DataFormatTransformUtil.packingToProtoMessage(MessageProtoBuf.ProtoMessage.Type.LOGIN_RESPONSE,
-					"server","","error");
+			loginResponse = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.LOGIN_RESPONSE, "error");
 			mSession.write(loginResponse);
 			logger.info("mina登录失败！");
 		}else {					//用户信息正确，正常登录
 			mSessionMap.put(userId, mSession);
 			logger.info("在线用户数量="+mSessionMap.size());
 			//正常的登录回执
-			loginResponse = DataFormatTransformUtil.packingToProtoMessage(MessageProtoBuf.ProtoMessage.Type.LOGIN_RESPONSE,
-					"server","","ok");
+			loginResponse = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.LOGIN_RESPONSE,"ok");
 			mSession.write(loginResponse);
 			//查询离线信息
 			List<MessageProtoBuf.ProtoMessage> offlineTextList = userGroupService.getOfflineText(userId);
@@ -62,8 +59,8 @@ public class LoginModel {
 				int groupAmount = userGroupService.getGroupAmountByUserId(userId);
 				if (groupAmount==0){
 					//通知用户一个群组也没有了
-					MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessage(
-							MessageProtoBuf.ProtoMessage.Type.NO_GROUP_NOTIFY,"","","ok");
+					MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
+							MessageProtoBuf.ProtoMessage.Type.NO_GROUP_NOTIFY,"ok");
 					mSession.write(message);
 				}
 			} else {

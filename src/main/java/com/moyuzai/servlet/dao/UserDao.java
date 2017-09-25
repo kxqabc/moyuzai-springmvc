@@ -25,6 +25,8 @@ public interface UserDao {
     List<User> queryAll(@Param(value = "offset")int offset,
                         @Param(value = "limit")int limit);
 
+    String queryUserNameById(@Param(value = "userId")long userId);
+
     /**修改*/
     int updateByMobile(@Param(value = "mobile") String mobile,
                        @Param(value = "password") String password);

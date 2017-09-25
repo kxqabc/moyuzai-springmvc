@@ -10,6 +10,9 @@ public class UsersResponse<T> {
     private String message;
     private T identity;
 
+    public UsersResponse() {
+    }
+
     /**有对象返回的信息*/
     public UsersResponse(MyEnum enums , T identity) {
         this.state = enums.isState();
@@ -21,6 +24,11 @@ public class UsersResponse<T> {
     public UsersResponse(MyEnum enums) {
         state = enums.isState();
         message = enums.getStateInfo();
+    }
+
+    public void setFromEnum(MyEnum myEnum){
+        state = myEnum.isState();
+        message = myEnum.getStateInfo();
     }
 
     public boolean isState() {

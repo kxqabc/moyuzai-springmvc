@@ -105,7 +105,6 @@ public class ServerHandler extends IoHandlerAdapter {
 				userGroupService.insertOfflineText(protoMessage,userId,groupId);
 			}
 		}
-
 	}
 
 	/**
