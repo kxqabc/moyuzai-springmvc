@@ -75,6 +75,10 @@ public class MinaServiceImpl implements MinaService{
 
     @Override
     public void notifyUserGroupIsDisMissed(Set<Long> userIdSet,long groupId) {
+        logger.info("通知所有成员群组已经解散！");
+        logger.info("userIdSet"+userIdSet.size());
+        if (DataFormatTransformUtil.isNullOrEmpty(userIdSet))
+            return;
         /** 使用工具类方法将“普通信息”包装成protoMessage */
         MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
                 MessageProtoBuf.ProtoMessage.Type.DISMISS_GROUP_NOTIFY, ""+groupId);
@@ -83,37 +87,32 @@ public class MinaServiceImpl implements MinaService{
 
     /**
      * 通知其他人群组资料变化
-     * @param groupId
-     * @param managerId
-     * @param picId
      */
     @Override
-    public void notifyUsersGroupMessageChange(Set<Long> userSet,long groupId,String groupName,long managerId,
-                                              String addUsers,int picId) {
-        if (userSet.isEmpty())
+    public void notifyUsersGroupMessageChange(Set<Long> userSet,Group group,String addUsers) {
+        if (DataFormatTransformUtil.isNullOrEmpty(userSet))
             return;
-        userSet.remove(managerId);       //不用通知自己
+        userSet.remove(group.getManagerId());       //不用通知自己
         //构造group对象
-        int amount = userGroupDao.queryAmountInGroupByGroupId(groupId);
         Map<String,Object> jsonMap = new HashMap<>();
-        jsonMap.put("id",groupId);
-        jsonMap.put("groupName",groupName);
-        jsonMap.put("managerId",managerId);
-        jsonMap.put("picId",picId);
-        jsonMap.put("amount",amount);
-        if (addUsers!=null && (!"".equals(addUsers))){
+        jsonMap.put("id",group.getId());
+        jsonMap.put("groupName",group.getGroupName());
+        jsonMap.put("managerId",group.getManagerId());
+        jsonMap.put("picId",group.getPicId());
+        jsonMap.put("amount",group.getAmount());
+        jsonMap.put("managerName",group.getManagerName());
+        if (!DataFormatTransformUtil.isNullOrEmpty(addUsers)){
             Set<Long> addUserSet = DataFormatTransformUtil.StringToLongSet(addUsers);
-            if (addUserSet != null || (!"".equals(addUserSet))){
+            if (!DataFormatTransformUtil.isNullOrEmpty(addUserSet)){
                 String addUsersName = userService.getUsersName(addUserSet);
                 jsonMap.put("addUsers",addUsersName.substring(0,addUsersName.length()-1));
             }
         }else
-            jsonMap.put("addUsers",null);
-        logger.info(new Gson().toJson(jsonMap));
+            jsonMap.put("addUsers","");
         MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
                 MessageProtoBuf.ProtoMessage.Type.UPDATE_GROUP_NOTIFY,new Gson().toJson(jsonMap));
         //通知
-        serverHandler.notifyAllUsers(userSet,groupId,message);
+        serverHandler.notifyAllUsers(userSet,group.getId(),message);
     }
 
     /**
@@ -128,7 +127,7 @@ public class MinaServiceImpl implements MinaService{
         Set<Long> userIdSet = new HashSet<>();
         userIdSet.addAll(userIds);
         userIdSet.remove(userId);       //不用通知自己
-        if (userIdSet.isEmpty())
+        if (DataFormatTransformUtil.isNullOrEmpty(userIdSet))
             return;
         //获取群组中成员的数量
         int usersAmount = userGroupDao.queryAmountInGroupByGroupId(groupId);

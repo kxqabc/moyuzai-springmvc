@@ -54,4 +54,13 @@ public class UsersResponse<T> {
     public void setIdentity(T identity) {
         this.identity = identity;
     }
+
+    @Override
+    public String toString() {
+        return "UsersResponse{" +
+                "state=" + state +
+                ", message='" + message + '\'' +
+                ", identity=" + identity +
+                '}';
+    }
 }

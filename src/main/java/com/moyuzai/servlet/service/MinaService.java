@@ -17,8 +17,8 @@ public interface MinaService {
 
     void notifyUserGroupIsDisMissed(Set<Long> userIdSet,long groupId);
 
-    void notifyUsersGroupMessageChange(Set<Long> userSet,long groupId,String groupName,long managerId,
-                                       String addUsers,int picId);
+    void notifyUsersGroupMessageChange(Set<Long> userSet,Group group,
+                                       String addUsers);
 
     void notifySomeJoined(long groupId,long userId);
 

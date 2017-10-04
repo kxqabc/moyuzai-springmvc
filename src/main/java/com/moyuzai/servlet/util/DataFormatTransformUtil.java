@@ -1,14 +1,18 @@
 package com.moyuzai.servlet.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import proto.MessageProtoBuf;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.HashSet;
-import java.util.Set;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class DataFormatTransformUtil{
+
+    Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public DataFormatTransformUtil() {
     }
@@ -23,42 +27,85 @@ public class DataFormatTransformUtil{
         MessageProtoBuf.ProtoMessage.Builder builder =
                 MessageProtoBuf.ProtoMessage.newBuilder();
         builder.setType(type);
-//        builder.setFrom(from);
-//        builder.setTo(to);
-        builder.setTime(""+System.currentTimeMillis());
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        builder.setTime(dateFormat.format(new Date()));
         builder.setBody(body);
         return builder.build();
     }
 
-    public static Set<Long> StringToLongSet(String message){
+    public static Set<Long> StringToLongSet(String message)
+    throws NumberFormatException{
         if (message == null || "".equals(message))
             return null;
         Set<Long> longSet = new HashSet<>();      //保存了所有ID的集合
-        String[] longArray = message.split(",");    //切割字符串
-        if (longArray == null || "".equals(longArray) || longArray.length==0)
-            return null;
-        /**从String中提取用户ID信息*/
-        for (String element:longArray){
-            if (element!=null&&(!"".equals(element)))
-                longSet.add(Long.parseLong(element));
+        //判断字符串中是否包含逗号
+        if (message.contains(",")){
+            String[] longArray = message.split(",");    //切割字符串
+            if (DataFormatTransformUtil.isNullOrEmpty(longArray))
+                return null;
+            /**从String中提取用户ID信息*/
+            long num;
+            for (String element:longArray){
+                if (!DataFormatTransformUtil.isNullOrEmpty(element)){
+                    try {
+                        num = Long.parseLong(element);
+                    }catch (NumberFormatException e1){
+                        System.out.println(e1.getMessage());
+                        throw e1;
+                    }
+                    longSet.add(num);
+                }
+            }
+        }else {
+            //如果parseLong出现错误不能转为long，则返回null
+            try {
+                long userId = Long.parseLong(message);
+                longSet.add(userId);
+            }catch (NumberFormatException e){
+                System.out.println(e.getMessage());
+                throw e;
+            }
         }
         return longSet;
     }
 
-    /**
-     * 将对象转为JSON
-     * @param object
-     * @return
-     */
-    public static String objectToJson(Object object){
-        StringWriter str = new StringWriter();
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            mapper.writeValue(str, object);
-        } catch (IOException e) {
-            e.printStackTrace();
+    public static <T> boolean isNullOrEmpty(T data){
+        if (data == null){
+            System.out.println("isNullOrEmpty.null:");
+            return true;
         }
-        return str.toString();
-
+        //字符串
+        if (data instanceof CharSequence){
+            System.out.println("isNullOrEmpty.char:");
+            return ((CharSequence)(CharSequence) data).length()==0;
+        }
+        //集合
+        if (data instanceof Collection){
+            System.out.println("isNullOrEmpty.coll:");
+            return ((Collection)data).isEmpty();
+        }
+        //Map
+        if (data instanceof Map){
+            System.out.println("isNullOrEmpty.map:");
+            return ((Map) data).isEmpty();
+        }
+        return false;
     }
+
+    public static String bytesToHexString(byte[] src){
+        StringBuilder stringBuilder = new StringBuilder("");
+        if (src == null || src.length <= 0) {
+            return null;
+        }
+        for (int i = 0; i < src.length; i++) {
+            int v = src[i] & 0xFF;
+            String hv = Integer.toHexString(v);
+            if (hv.length() < 2) {
+                stringBuilder.append(0);
+            }
+            stringBuilder.append(hv);
+        }
+        return stringBuilder.toString();
+    }
+
 }

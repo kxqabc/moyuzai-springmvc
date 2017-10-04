@@ -42,6 +42,7 @@
 
 <script type="text/javascript">
     var pageNum = 1;
+    var step = 20;
     var anyMore = true;
     var type;
     var title = new Array(3);
@@ -91,8 +92,8 @@
         $.getJSON(localUrl+type+"&pageNum="+pageNum,
             function(data){
                 var array = data["identity"];
-                //如果返回数据少于10，则说明这是最后一页
-                if(array.length<10){
+                //如果返回数据少于step，则说明这是最后一页
+                if(array.length<step){
                     anyMore = false;
                 }
                 $.each(array, function (index, element) {
@@ -139,7 +140,8 @@
     $(document).ready(function(){
         $(window).scroll(function() {
             if(anyMore){
-                if ($(document).scrollTop() >= $(document).height() - $(window).height())
+              //console.log("document height: %f,window height: %f,scrollTop: %f",$(document).height(),$(window).height(),$(document).scrollTop());
+                if ($(document).scrollTop() >= $(document).height() - $(window).height() - 2) //-2
                     addDataList(type,++pageNum);
                 }else {
                     $("#label").show();

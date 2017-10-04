@@ -15,6 +15,8 @@ public interface GroupService {
 
     Group queryGroupByGroupNameManId(String groupName, long managerId);
 
+    Group getGroupWithManName(long groupId);
+
     UsersResponse changeGroupPic(long groupId,long managerId,int picId);
 
     UsersResponse changeGroupName(long groupId,long managerId,String groupName);

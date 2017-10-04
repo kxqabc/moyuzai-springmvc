@@ -13,9 +13,12 @@ import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.exception.AddPicIdErrorException;
 import com.moyuzai.servlet.exception.AddUserToGroupErrorException;
 import com.moyuzai.servlet.exception.DeleteUserException;
+import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import proto.MessageProtoBuf;
@@ -27,6 +30,8 @@ import java.util.Set;
 
 @Service
 public class UserGroupServiceImpl implements UserGroupService {
+
+    Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
     private UserDao userDao;
@@ -44,7 +49,7 @@ public class UserGroupServiceImpl implements UserGroupService {
     @Override
     public UsersResponse getAll(int offset, int limit) {
         List<UserGroup> userGroups = userGroupDao.queryAll(offset,limit);
-        if (userGroups == null || "".equals(userGroups) || userGroups.size() == 0)
+        if (DataFormatTransformUtil.isNullOrEmpty(userGroups))
             return new UsersResponse(MyEnum.USER_NOT_FOUND);
         else
             return new UsersResponse(MyEnum.GET_USER_SUCCESS, userGroups);
@@ -63,7 +68,7 @@ public class UserGroupServiceImpl implements UserGroupService {
     @Override
     public UsersResponse getUsersOfGroup(long groupId) {
         List<User> users = userGroupDao.queryUsersBYGroupId(groupId);
-        if (users==null || "".equals(users) || users.size()==0)
+        if (DataFormatTransformUtil.isNullOrEmpty(users))
             return new UsersResponse(MyEnum.USER_NOT_FOUND);
         else
             return new UsersResponse(MyEnum.GET_USER_SUCCESS,users);
@@ -128,7 +133,7 @@ public class UserGroupServiceImpl implements UserGroupService {
     @Override
     public boolean isJoined(long groupId,long userId){
         UserGroup userGroup = userGroupDao.queryUserGroup(groupId,userId);
-        if (userGroup == null || "".equals(userGroup))      //查询结果为空，说明用户还没有加入该群组
+        if (DataFormatTransformUtil.isNullOrEmpty(userGroup))      //查询结果为空，说明用户还没有加入该群组
             return false;
         else
             return true;
@@ -186,7 +191,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         List<String> jsonList = new ArrayList<>();                          //保存的JSON LIST
         List<String> results = userGroupDao.getOfflineTextMulti(userId);    //得到多个组的离线信息，列表中每个元素代表一个群组中的离线消息
         StringBuffer stringBuffer;      //拼接results数组为一个json格式。(这里最好用stringbuffer，因为直接在循环体内拼接的话，相当于每次都要new出一个新的stringbuffer，造成浪费！)
-        if (results==null||results.isEmpty()||results.size()==0){
+        if (DataFormatTransformUtil.isNullOrEmpty(results)){
             return null;
         }else {
             stringBuffer = new StringBuffer();
@@ -203,7 +208,7 @@ public class UserGroupServiceImpl implements UserGroupService {
             Object json;
             for (int i=0;i<length;i++){
                 json = jsonArray.get(i);
-                if ((json != null)&&(!"".equals(json)))
+                if (!DataFormatTransformUtil.isNullOrEmpty(json))
                     jsonList.add(json.toString());
             }
         } catch (JSONException e) {
@@ -263,6 +268,8 @@ public class UserGroupServiceImpl implements UserGroupService {
             try {
                 userGroupDao.saveUserGroup(groupId, iterator.next());
             }catch (Exception e){
+                logger.error("用户加入群组出现错误！");
+                logger.error(e.getMessage());
                 throw new AddUserToGroupErrorException("用户加入群组出现错误！");
             }
         }
@@ -279,6 +286,8 @@ public class UserGroupServiceImpl implements UserGroupService {
                 if (deleteCount==0)
                     throw new DeleteUserException("踢出用户错误异常！");
             }catch (Exception e){
+                logger.error("踢出用户错误异常！");
+                logger.error(e.getMessage());
                 throw new DeleteUserException("踢出用户错误异常！");
             }
         }

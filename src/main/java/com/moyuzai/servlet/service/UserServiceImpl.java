@@ -5,6 +5,7 @@ import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.http.HttpURLConnPost;
+import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +20,11 @@ import java.util.Set;
  */
 @Service
 public class UserServiceImpl implements UserService{
+
     final static private String apikey = "fb0d88c9cd4a59d2e837fb3128d62409";
+
     final static private String url = "https://sms.yunpian.com/v2/sms/single_send.json";
+
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
@@ -29,7 +33,7 @@ public class UserServiceImpl implements UserService{
     @Override
     public UsersResponse getUserById(long id) {
         User user = userDao.queryById(id);
-        if (user == null || "".equals(user))
+        if (DataFormatTransformUtil.isNullOrEmpty(user))
             return new UsersResponse(MyEnum.USER_NOT_FOUND);
         else
             return new UsersResponse(MyEnum.GET_USER_SUCCESS, user.getId() + ","
@@ -39,7 +43,7 @@ public class UserServiceImpl implements UserService{
     @Override
     public UsersResponse getUserByMobile(String mobile) {
         User user = userDao.queryByMobile(mobile);
-        if (user == null || "".equals(user))
+        if (DataFormatTransformUtil.isNullOrEmpty(user))
             return new UsersResponse(MyEnum.USER_NOT_FOUND);
         else
             return new UsersResponse(MyEnum.GET_USER_SUCCESS, user.getId() + ","
@@ -50,7 +54,7 @@ public class UserServiceImpl implements UserService{
     public UsersResponse userLogin(String mobile, String password) {
         //queryPasswardByMobile()方法获取的user对象中包含了id、userName、password
         User user = userDao.queryPasswardByMobile(mobile);
-        if (user == null || "".equals(user))
+        if (DataFormatTransformUtil.isNullOrEmpty(user))
             return new UsersResponse(MyEnum.NEVER_REGISTER);
         else if (password.equals(user.getPassword()))
             return new UsersResponse(MyEnum.LOGIN_SUCCESS,
@@ -62,7 +66,7 @@ public class UserServiceImpl implements UserService{
     @Override
     public UsersResponse getAllUsers(int offset, int limit) {
         List<User> users = userDao.queryAll(offset,limit);
-        if (users == null || "".equals(users) || users.size() == 0)
+        if (DataFormatTransformUtil.isNullOrEmpty(users))
             return new UsersResponse(MyEnum.USER_NOT_FOUND);
         else
             return new UsersResponse(MyEnum.GET_USER_SUCCESS, users);
@@ -70,12 +74,12 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public String getUsersName(Set<Long> userIdSet) {
-        if (userIdSet==null||"".equals(userIdSet))
+        if (DataFormatTransformUtil.isNullOrEmpty(userIdSet))
             return null;
         StringBuffer userNameString = new StringBuffer();
         for (long userId:userIdSet){
             String userName = userDao.queryUserNameById(userId);
-            if (userName!=null&&(!"".equals(userName)))
+            if (!DataFormatTransformUtil.isNullOrEmpty(userName))
                 userNameString.append(userName+",");
         }
         return userNameString.toString();
@@ -115,7 +119,7 @@ public class UserServiceImpl implements UserService{
     public UsersResponse justifyPassword(String mobile, String newPassword) {
         User user = userDao.queryByMobile(mobile);
         //没有找到用户
-        if (user==null||"".equals(user)){
+        if (DataFormatTransformUtil.isNullOrEmpty(user)){
             return new UsersResponse(MyEnum.USER_NOT_FOUND);
         }
         //修改密码
@@ -153,7 +157,7 @@ public class UserServiceImpl implements UserService{
      */
     private boolean checkUserByMobile(String mobile){
         User user = userDao.queryByMobile(mobile);
-        if(user==null||"".equals(user)){
+        if(DataFormatTransformUtil.isNullOrEmpty(user)){
             return false;
         }else{
             return true;
@@ -185,7 +189,7 @@ public class UserServiceImpl implements UserService{
     @Override
     public boolean isUserExist(long managerId){
         User user = userDao.queryById(managerId);
-        if (user == null || "".equals(user))
+        if (DataFormatTransformUtil.isNullOrEmpty(user))
             return false;
         else
             return true;
@@ -200,7 +204,7 @@ public class UserServiceImpl implements UserService{
     public boolean isAllUserExist(Set<Long> userIdSet){
         for (long userId:userIdSet){
             User user = userDao.queryById(userId);
-            if (user==null||"".equals(user))
+            if (DataFormatTransformUtil.isNullOrEmpty(user))
                 return false;
         }
         return true;

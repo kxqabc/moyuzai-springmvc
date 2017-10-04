@@ -2,6 +2,8 @@ package com.moyuzai.servlet.controller;
 
 import com.moyuzai.servlet.dto.GroupResponse;
 import com.moyuzai.servlet.dto.UsersResponse;
+import com.moyuzai.servlet.entity.Group;
+import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.exception.*;
 import com.moyuzai.servlet.service.GroupService;
@@ -36,7 +38,7 @@ public class MyController {
 
 //    private static final int LIMIT = 20;     //默认返回结果集个数
 
-    private static final int STEP = 10;      //每页的结果条数
+    private static final int STEP = 20;      //每页的结果条数
 
     private static final int OFFSET = 0;     //结果集默认起始位置
 
@@ -58,7 +60,7 @@ public class MyController {
     @RequestMapping(value = "/Controller")
     public String transponder(@RequestParam("type") String type,HttpServletRequest request,
                               ModelAndView modelAndView){
-        logger.info("请求进入控制转发器。。");
+//        logger.info("请求进入控制转发器。。");
         switch (type){
             case "users":return "forward:/users";
             case "groups":return "forward:/groups";
@@ -96,7 +98,10 @@ public class MyController {
     @RequestMapping(value = "/getById")
     public UsersResponse queryUserById(@RequestParam("id") long id){
         logger.info("按ID查询用户。。");
-        return userService.getUserById(id);
+        logger.info("id:"+id);
+        UsersResponse usersResponse = userService.getUserById(id);
+        logger.info(usersResponse.toString());
+        return usersResponse;
     }
 
     /**
@@ -107,7 +112,9 @@ public class MyController {
     public UsersResponse sendLoginMessage(@RequestParam("mobile") String mobile,
                                           HttpSession httpSession){
         logger.info("发送短信获取验证码。。");
+        logger.info("mobile:"+mobile);
         UsersResponse usersResponse = userService.sendLoginMessage(mobile,httpSession);
+        logger.info(usersResponse.toString());
         return usersResponse;
     }
 
@@ -118,8 +125,10 @@ public class MyController {
     @RequestMapping(value = "/users")
     public UsersResponse queryAllUsers(@RequestParam("pageNum") int pageNum){
         logger.info("查询所有用户。。");
+        logger.info("pageNum:"+pageNum);
         /**pageNum从1开始*/
         UsersResponse usersResponse = userService.getAllUsers(STEP*(pageNum-1), STEP*pageNum);
+//        logger.info(usersResponse.toString());
         return usersResponse;
     }
     @ResponseBody
@@ -170,15 +179,19 @@ public class MyController {
     public UsersResponse queryUserByMobile(@RequestParam("mobile") String mobile,
                                            HttpSession httpSession){
         logger.info("按手机号码查询用户。。");
-        logger.info("mobile in session:"+httpSession.getAttribute("mobile"));
+        logger.info("mobile:"+mobile);
         UsersResponse usersResponse = userService.getUserByMobile(mobile);
+        logger.info(usersResponse.toString());
         return usersResponse;
     }
     @ResponseBody
     @RequestMapping(value = "/getUsersOfGroup")
     public UsersResponse getUsersOfGroup(@RequestParam("groupId") long groupId){
         logger.info("按群组ID查询用户。。");
-        return userGroupService.getUsersOfGroup(groupId);
+        logger.info("groupId:"+groupId);
+        UsersResponse usersResponse = userGroupService.getUsersOfGroup(groupId);
+        logger.info(usersResponse.toString());
+        return usersResponse;
     }
 
     /**
@@ -189,8 +202,9 @@ public class MyController {
     public UsersResponse matchCode(@RequestParam("textCode") String textCode,
                                    HttpSession httpSession){
         logger.info("核对验证码。。");
+        logger.info("textCode:"+textCode);
         String originCode = (String) httpSession.getAttribute("textCode");
-        if (originCode==null||"".equals(originCode)){
+        if (DataFormatTransformUtil.isNullOrEmpty(originCode)){
             return new UsersResponse(MyEnum.NO_TEXT_CODE);
         }else {
             if (originCode.equals(textCode))
@@ -209,9 +223,12 @@ public class MyController {
                                       @RequestParam(value = "password")String password,
                                       HttpSession httpSession){
         logger.info("注册用户。。");
+        logger.info("name:"+userName);
+        logger.info("password:"+password);
         //从httpSession中获取用户之前填写的手机号
         String mobile = (String) httpSession.getAttribute("mobile");
-        if (mobile==null||"".equals(mobile))
+        logger.info("mobile in httpSession:"+mobile);
+        if (DataFormatTransformUtil.isNullOrEmpty(mobile))
             return new UsersResponse(MyEnum.NO_MOBILE_FOUND); //获取不到手机号
         else{
             return userService.userRegister(userName,mobile,password);
@@ -240,8 +257,10 @@ public class MyController {
     public UsersResponse modifyPassword(@RequestParam(value = "password")String password,
                                         HttpSession httpSession){
         logger.info("修改密码。。");
+        logger.info("password:"+password);
         String mobile = (String) httpSession.getAttribute("mobile");
-        if (mobile == null || "".equals(mobile))
+        logger.info("mobile in httpSession:"+mobile);
+        if (DataFormatTransformUtil.isNullOrEmpty(mobile))
             return paramNotFound();
         return userService.justifyPassword(mobile,password);
     }
@@ -271,7 +290,11 @@ public class MyController {
     public UsersResponse createGroup(@RequestParam("groupName")String groupName,
                             @RequestParam("managerId")long managerId){
         logger.info("创建群组（不包含群组头像等信息）。。");
-        return groupService.createGroup(groupName,managerId);
+        logger.info("groupName:"+groupName);
+        logger.info("managerId:"+managerId);
+        UsersResponse usersResponse = groupService.createGroup(groupName,managerId);
+        logger.info(usersResponse.toString());
+        return usersResponse;
     }
 
     /**
@@ -289,9 +312,19 @@ public class MyController {
                                              @RequestParam("groupName")String groupName,
                                              @RequestParam("managerId")long managerId){
         logger.info("创建群组（包含群组头像、群组成员）。。");
+        logger.info("users:"+users);
+        logger.info("picId:"+picId);
+        logger.info("groupName:"+groupName);
+        logger.info("managerId:"+managerId);
         /**从String中提取用户ID信息*/
-        Set<Long> userIdSet = DataFormatTransformUtil.StringToLongSet(users);
-        if (userIdSet == null)      //users为空
+        Set<Long> userIdSet = null;
+        try {
+            userIdSet = DataFormatTransformUtil.StringToLongSet(users);
+        }catch (NumberFormatException e){
+            //字符串users中数字格式错误
+            return new UsersResponse(MyEnum.STRING_FORMAT_REEOR);
+        }
+        if (DataFormatTransformUtil.isNullOrEmpty(userIdSet))      //users为空
             return paramNotFound();
         /**进行“事务”操作，若出现runtimeException则rollback，否则commit*/
         try {
@@ -373,10 +406,10 @@ public class MyController {
     public UsersResponse dismissGroup(@RequestParam(value = "managerId")long managerId,
                                       @RequestParam(value = "groupId")long groupId){
         logger.info("解散群组。。");
+        List<Long> userIds = userGroupService.queryAllUserIdOfGroup(groupId);
         UsersResponse usersResponse = groupService.deleteGroup(managerId,groupId);
         if (usersResponse.isState()){
             //通知组内所有人该组解散
-            List<Long> userIds = userGroupService.queryAllUserIdOfGroup(groupId);
             Set<Long> userIdSet = new HashSet<>();
             userIdSet.addAll(userIds);
             userIdSet.remove(managerId);    //除去管理者，不通知他
@@ -403,9 +436,11 @@ public class MyController {
             //如果操作成功，通知群内其他所有人
             if (usersResponse.isState()){
                 Map<String,Object> usersMap = (Map<String, Object>) usersResponse.getIdentity();
-                if (usersMap.containsKey("unAffectedUsers"))
-                    minaService.notifyUsersGroupMessageChange((Set<Long>) usersMap.get("unAffectedUsers"),
-                        groupId,groupName,managerId,addUsers,picId);
+                if (usersMap.containsKey("unAffectedUsers")){
+                    Group group = groupService.getGroupWithManName(groupId);
+                    group.setAmount(userGroupService.getAmountInGroupById(groupId));
+                    minaService.notifyUsersGroupMessageChange((Set<Long>) usersMap.get("unAffectedUsers"), group,addUsers);
+                }
                 if (usersMap.containsKey("addUsers"))
                     minaService.notifyUserIsPulledIntoGroup((Set<Long>) usersMap.get("addUsers"),groupId);
                 if (usersMap.containsKey("minusUsers"))
@@ -421,7 +456,10 @@ public class MyController {
             return new UsersResponse(MyEnum.REMAIN_USERS);
         }catch (DeleteUserException e4){
             return new UsersResponse(MyEnum.DELETE_USER_FAIL);
+        }catch (NumberFormatException e5){
+            return new UsersResponse(MyEnum.STRING_FORMAT_REEOR);
         }catch (Exception e){
+            logger.error(e.getMessage());
             return new UsersResponse(MyEnum.INNER_REEOR);
         }
     }

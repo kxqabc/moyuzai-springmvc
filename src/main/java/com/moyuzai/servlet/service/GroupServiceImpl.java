@@ -41,7 +41,7 @@ public class GroupServiceImpl implements GroupService{
     @Override
     public UsersResponse getAllGroups(int offset, int limit) {
         List<Group> groups = groupDao.queryAll(offset,limit);
-        if (groups == null || "".equals(groups) || groups.size() == 0)
+        if (DataFormatTransformUtil.isNullOrEmpty(groups))
             return new UsersResponse(MyEnum.USER_NOT_FOUND);
         else
             return new UsersResponse(MyEnum.GET_USER_SUCCESS, groups);
@@ -50,7 +50,7 @@ public class GroupServiceImpl implements GroupService{
     @Override
     public GroupResponse getGroupById(long groupId) {
         Group group = groupDao.queryGroupWithManNameById(groupId);
-        if (group == null || "".equals(group))
+        if (DataFormatTransformUtil.isNullOrEmpty(group))
             return new GroupResponse(MyEnum.GROUP_IS_NOT_EXIST);        //这里的dto改变了
         else{
             int userAmount = userGroupService.getAmountInGroupById(groupId);
@@ -64,6 +64,11 @@ public class GroupServiceImpl implements GroupService{
     public Group queryGroupByGroupNameManId(String groupName, long managerId) {
         Group group = groupDao.queryByGroupNameManagerId(groupName,managerId);
         return group;
+    }
+
+    @Override
+    public Group getGroupWithManName(long groupId) {
+        return groupDao.queryGroupWithManNameById(groupId);
     }
 
     @Override
@@ -131,35 +136,44 @@ public class GroupServiceImpl implements GroupService{
         //检验传入参数，确定更改项
         try {
             //检查picId参数是否为空，为空则表示没有修改
-            if (picId!=null && (!"".equals(picId)))
+            if (!DataFormatTransformUtil.isNullOrEmpty(picId))
                 groupDao.updateGroupPic(groupId,picId);
             //检查groupName参数是否为空
-            if (groupName!=null && (!"".equals(groupName)))
+            if (!DataFormatTransformUtil.isNullOrEmpty(groupName))
                 groupDao.updateGroupName(groupId,groupName);
             //踢出组员
-            if (minusUsers!=null && (!"".equals(minusUsers))){
+            if (!DataFormatTransformUtil.isNullOrEmpty(minusUsers)){
                 Set<Long> minusUsersIdSet = DataFormatTransformUtil.StringToLongSet(minusUsers);
                 //将users依次踢出group
-                if (minusUsersIdSet!=null && (!"".equals(minusUsersIdSet) && minusUsersIdSet.size()>0 )){
+                if (!DataFormatTransformUtil.isNullOrEmpty(minusUsersIdSet)){
                     userGroupService.deleteUsersOfGroup(minusUsersIdSet,groupId);
                     //将踢出的用户id集合保存
                     usersMap.put("minusUsers",minusUsersIdSet);
                 }
-
+            }
+            //如果只改变了“踢出成员”这一项的话，就没必要做下去了；
+            // 并且，不会再向map中put：unAffectedUsers、addUsers，刚好不用通知这两种人群
+            if (picId==null && groupName==null && addUsers==null){
+                return new UsersResponse(MyEnum.CHANGE_GROUP_DATE_SUCCESS,usersMap);
             }
             //获取要通知“群组资料变化”的组员ID
             List<Long> unTouchedUserIds = userGroupService.queryAllUserIdOfGroup(groupId);
             //将用户ID保存在dto的identity中
-            if (unTouchedUserIds!=null && (!"".equals(unTouchedUserIds))){
+            if (!DataFormatTransformUtil.isNullOrEmpty(unTouchedUserIds)){
                 Set<Long> unTouchUserSet = new HashSet<>();
                 unTouchUserSet.addAll(unTouchedUserIds);
-                unTouchedUserIds.remove(managerId);
-                usersMap.put("unAffectedUsers",unTouchUserSet);
+                unTouchUserSet.remove(managerId);
+                if (!DataFormatTransformUtil.isNullOrEmpty(unTouchUserSet)){
+                    usersMap.put("unAffectedUsers",unTouchUserSet);
+                    logger.info("unAffectedUsers:"+unTouchUserSet.size());
+                }
             }
-            if (addUsers!=null && (!"".equals(addUsers))){
+            if (!DataFormatTransformUtil.isNullOrEmpty(addUsers)){
+                logger.info("addUsers:"+addUsers);
                 Set<Long> addUsersIdSet = DataFormatTransformUtil.StringToLongSet(addUsers);
+                logger.info("addUsersIdSet.size:"+addUsersIdSet.size());
                 //将users依次加入group中
-                if (addUsersIdSet!=null && (!"".equals(addUsersIdSet) && addUsersIdSet.size()>0 )){
+                if (!DataFormatTransformUtil.isNullOrEmpty(addUsersIdSet)){
                     userGroupService.addUsersToGroup(addUsersIdSet,groupId);
                     usersMap.put("addUsers",addUsersIdSet);
                 }
@@ -172,8 +186,10 @@ public class GroupServiceImpl implements GroupService{
             throw e3;
         }catch (DeleteUserException e4){
             throw e4;
+        }catch (NumberFormatException e5){
+            throw e5;
         }catch (Exception e){
-            logger.error(e.toString(),e);
+            logger.error(e.getMessage());
             throw new MoyuzaiInnerErrorException("墨鱼仔出现内部错误！");
         }
         return new UsersResponse(MyEnum.CHANGE_GROUP_DATE_SUCCESS,usersMap);
@@ -231,7 +247,7 @@ public class GroupServiceImpl implements GroupService{
         }catch (AddUserToGroupErrorException e3){
             throw e3;
         }catch (Exception e){
-            logger.error(e.toString(),e);
+            logger.error(e.getMessage());
             throw new MoyuzaiInnerErrorException("墨鱼仔出现内部错误！");
         }
     }
@@ -245,7 +261,7 @@ public class GroupServiceImpl implements GroupService{
     @Override
     public boolean checkGroupIsExist(String groupName, long managerId){
         Group group = groupDao.queryByGroupNameManagerId(groupName,managerId);
-        if (group == null || "".equals(group))
+        if (DataFormatTransformUtil.isNullOrEmpty(group))
             return false;
         else
             return true;
@@ -254,7 +270,7 @@ public class GroupServiceImpl implements GroupService{
     @Override
     public boolean checkGroupIsExist(long groupId) {
         Group group = groupDao.queryById(groupId);
-        if (group == null || "".equals(group))
+        if (DataFormatTransformUtil.isNullOrEmpty(group))
             return false;
         else
             return true;
@@ -263,7 +279,7 @@ public class GroupServiceImpl implements GroupService{
     @Override
     public boolean isManagerOfThisGroup(long groupId, long managerId) {
         Group group = groupDao.queryById(groupId);
-        if (group == null|| "".equals(group))
+        if (DataFormatTransformUtil.isNullOrEmpty(group))
             return false;
         if (managerId == group.getManagerId())
             return true;

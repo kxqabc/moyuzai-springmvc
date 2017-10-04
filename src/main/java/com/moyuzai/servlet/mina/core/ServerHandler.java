@@ -121,7 +121,7 @@ public class ServerHandler extends IoHandlerAdapter {
 			}else {		//不在线，则保存在离线信息中
 				log.info("用户："+userId+"离线，将推送信息保存在数据库中。。");
 				UserGroup insertedGroup = userGroupDao.queryAnotherGroupOfUser(groupId,userId);
-				if (insertedGroup == null || "".equals(insertedGroup)){		//表示该用户已经没有其他群组了
+				if (DataFormatTransformUtil.isNullOrEmpty(insertedGroup)){		//表示该用户已经没有其他群组了
 
 				}else {
 					//获取之前的离线信息
