@@ -58,6 +58,8 @@ public class ServerHandler extends IoHandlerAdapter {
 			//登录
 			LoginModel loginModel = new LoginModel(sessionMap, session, protoMessage);
 			loginModel.handle(userService,userGroupService);
+		}else if (type == Type.HEART_BEAT){
+			session.write(DataFormatTransformUtil.packingToProtoMessageOption(Type.HEART_BEAT_RESPONSE,"ok"));
 		}
 	}
 

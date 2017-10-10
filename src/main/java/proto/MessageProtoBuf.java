@@ -235,6 +235,14 @@ public final class MessageProtoBuf {
        * <code>NO_GROUP_NOTIFY = 9;</code>
        */
       NO_GROUP_NOTIFY(9),
+      /**
+       * <code>HEART_BEAT = 10;</code>
+       */
+      HEART_BEAT(10),
+      /**
+       * <code>HEART_BEAT_RESPONSE = 11;</code>
+       */
+      HEART_BEAT_RESPONSE(11),
       ;
 
       /**
@@ -277,6 +285,14 @@ public final class MessageProtoBuf {
        * <code>NO_GROUP_NOTIFY = 9;</code>
        */
       public static final int NO_GROUP_NOTIFY_VALUE = 9;
+      /**
+       * <code>HEART_BEAT = 10;</code>
+       */
+      public static final int HEART_BEAT_VALUE = 10;
+      /**
+       * <code>HEART_BEAT_RESPONSE = 11;</code>
+       */
+      public static final int HEART_BEAT_RESPONSE_VALUE = 11;
 
 
       public final int getNumber() {
@@ -303,6 +319,8 @@ public final class MessageProtoBuf {
           case 7: return DISMISS_GROUP_NOTIFY;
           case 8: return UPDATE_GROUP_NOTIFY;
           case 9: return NO_GROUP_NOTIFY;
+          case 10: return HEART_BEAT;
+          case 11: return HEART_BEAT_RESPONSE;
           default: return null;
         }
       }
@@ -1358,15 +1376,16 @@ public final class MessageProtoBuf {
       descriptor;
   static {
     String[] descriptorData = {
-      "\n\025MessageProtoBuf.proto\022\005proto\"\306\002\n\014Proto" +
+      "\n\025MessageProtoBuf.proto\022\005proto\"\357\002\n\014Proto" +
       "Message\022,\n\004type\030\001 \002(\0162\030.proto.ProtoMessa" +
       "ge.Type:\004CHAT\022\014\n\004from\030\002 \001(\t\022\n\n\002to\030\003 \001(\t\022" +
-      "\014\n\004time\030\004 \002(\t\022\014\n\004body\030\005 \002(\t\"\321\001\n\004Type\022\t\n\005" +
+      "\014\n\004time\030\004 \002(\t\022\014\n\004body\030\005 \002(\t\"\372\001\n\004Type\022\t\n\005" +
       "LOGIN\020\000\022\010\n\004CHAT\020\001\022\022\n\016LOGIN_RESPONSE\020\002\022\021\n" +
       "\rCHAT_RESPONSE\020\003\022\025\n\021JOIN_GROUP_NOTIFY\020\004\022" +
       "\025\n\021QUIT_GROUP_NOTIFY\020\005\022\027\n\023SOMEONE_JOIN_N" +
       "OTIFY\020\006\022\030\n\024DISMISS_GROUP_NOTIFY\020\007\022\027\n\023UPD" +
-      "ATE_GROUP_NOTIFY\020\010\022\023\n\017NO_GROUP_NOTIFY\020\t"
+      "ATE_GROUP_NOTIFY\020\010\022\023\n\017NO_GROUP_NOTIFY\020\t\022" +
+      "\016\n\nHEART_BEAT\020\n\022\027\n\023HEART_BEAT_RESPONSE\020\013"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {

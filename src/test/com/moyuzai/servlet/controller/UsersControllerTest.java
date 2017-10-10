@@ -7,10 +7,9 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
 import javax.annotation.Resource;
 
@@ -30,22 +29,22 @@ public class UsersControllerTest {
 
     @Autowired
     private UserService userService;
-
-    @Resource
-    private JedisPool jedisPool;
-
-    @org.junit.Test
-    public void test() {
-        //从连接池中获取jedis实例
-        Jedis jedis = jedisPool.getResource();
-        //设置键值对
-        jedis.set("admin", "root");
-        //根据key查询
-        String admin = jedis.get("admin");
-        //打印
-        System.out.println("admin:" + admin);
-        //关闭jedis实例
-        jedis.close();
-    }
+//    new ClassPathXmlApplicationContext
+//    @Resource
+//    private JedisPool jedisPool;
+//
+//    @org.junit.Test
+//    public void test() {
+//        //从连接池中获取jedis实例
+//        Jedis jedis = jedisPool.getResource();
+//        //设置键值对
+//        jedis.set("admin", "root");
+//        //根据key查询
+//        String admin = jedis.get("admin");
+//        //打印
+//        System.out.println("admin:" + admin);
+//        //关闭jedis实例
+//        jedis.close();
+//    }
 
 }
