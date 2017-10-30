@@ -6,6 +6,7 @@ import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.exception.DataClassErrorException;
+import com.moyuzai.servlet.exception.TargetLostException;
 import proto.MessageProtoBuf;
 
 import javax.servlet.http.HttpSession;
@@ -42,6 +43,12 @@ public interface ServiceProxy {
 
     Group getGroupWithManName(long groupId) throws DataClassErrorException;
 
+    GroupResponse getGroupWithMoreDetail(long groupId) throws DataClassErrorException, TargetLostException;
+
+    UsersResponse deleteGroup(long managerId,long groupId);
+
+    UsersResponse deleteGroup(long groupId);
+
     UsersResponse changeGroupPic(long groupId, long managerId, int picId,boolean cheched);
 
     UsersResponse changeGroupName(long groupId,long managerId,String groupName,boolean cheched);
@@ -56,33 +63,17 @@ public interface ServiceProxy {
     /**代理关系表操作*/
     UsersResponse getAll(int offset, int resultCount);
 
-//    int getGroupAmountByUserId(long userId);
-
-//    int getAmountInGroupById(long groupId);
-
     UsersResponse getUsersOfGroup(long groupId);
 
     UsersResponse joinGroup(long userId, long groupId);
 
     UsersResponse signoutFromGroup(long userId, long groupId);
 
+    UsersResponse queryAllUserIdOfGroup(long groupId);
 
+    UsersResponse deleteUserOfGroup(long id);
 
-    List<Long> queryAllUserIdOfGroup(long groupId);
+    /**代理mina*/
 
-    UsersResponse addUserPicToGroup(Set<Long> userIdSet, long managerId, String groupName, int picId);
-
-    ServiceData addUserToGroup(long userId,long groupId);
-
-    void addUsersToGroup(Set<Long> userIdSet,long groupId);
-
-    void deleteUsersOfGroup(Set<Long> userIdSet,long groupId);
-
-    UsersResponse deleteUsersOfGroup(long id);
-
-    int insertOfflineText(MessageProtoBuf.ProtoMessage protoMessage,
-                          long userId, long groupId);
-
-    List<MessageProtoBuf.ProtoMessage> getOfflineText(long userId);
 
 }

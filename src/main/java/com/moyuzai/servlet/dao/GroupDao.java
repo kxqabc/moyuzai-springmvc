@@ -3,6 +3,7 @@ package com.moyuzai.servlet.dao;
 import com.moyuzai.servlet.entity.Group;
 import org.apache.ibatis.annotations.Param;
 
+import java.sql.SQLException;
 import java.util.List;
 
 public interface GroupDao {
@@ -27,7 +28,7 @@ public interface GroupDao {
                         @Param(value = "groupName")String groupName);
 
     int deleteGroup(@Param(value = "managerId")long managerId,
-                    @Param(value = "groupId")long groupId);
+                    @Param(value = "groupId")long groupId)throws SQLException;
 
     int deleteGroupById(@Param(value = "groupId")long groupId);
 

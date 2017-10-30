@@ -24,7 +24,7 @@ public interface GroupService {
 
     ServiceData createGroup(String groupName, long managerId);
 
-    UsersResponse deleteGroup(long managerId,long groupId);
+    ServiceData deleteGroup(long managerId,long groupId);
 
     UsersResponse deleteGroup(long groupId);
     /**工具方法*/

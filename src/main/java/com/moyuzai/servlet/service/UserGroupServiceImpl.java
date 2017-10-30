@@ -38,17 +38,7 @@ public class UserGroupServiceImpl implements UserGroupService {
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
-    private UserDao userDao;
-    @Autowired
-    private GroupDao groupDao;
-    @Autowired
     private UserGroupDao userGroupDao;
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private GroupService groupService;
-    @Autowired
-    private MinaService minaService;
 
     @Override
     public UsersResponse getAll(int offset, int limit) {
@@ -75,7 +65,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         if (DataFormatTransformUtil.isNullOrEmpty(users))
             return new ServiceData(false,null);
         else
-            return new ServiceData(true,null);
+            return new ServiceData(true,users);
     }
 
     /**
@@ -139,9 +129,12 @@ public class UserGroupServiceImpl implements UserGroupService {
      * @return
      */
     @Override
-    public List<Long> queryAllUserIdOfGroup(long groupId) {
+    public ServiceData queryAllUserIdOfGroup(long groupId) {
         List<Long> userIds = userGroupDao.queryAllUserIdOfGroup(groupId);
-        return userIds;
+        if (DataFormatTransformUtil.isNullOrEmpty(userIds))
+            return new ServiceData(false,null);
+        else
+            return new ServiceData(true,userIds);
     }
 
 
@@ -212,31 +205,6 @@ public class UserGroupServiceImpl implements UserGroupService {
         /**读取离线消息后将其置空*/
         userGroupDao.updateOfflineTextMulti("",userId);
         return outPut;
-    }
-
-
-    /**
-     * 将用户集合一个个的添加入某群组中并添加群组头像
-     * @param userIdSet
-     * @param managerId
-     * @param groupName
-     * @param picId
-     * @return
-     */
-    @Override
-    public UsersResponse addUserPicToGroup(Set<Long> userIdSet, long managerId, String groupName, int picId)
-    throws AddPicIdErrorException,AddUserToGroupErrorException{
-        Group group = groupDao.queryByGroupNameManagerId(groupName,managerId);
-        long groupId = group.getId();
-        /**添加群组头像*/
-        try {
-            int isAdded = groupDao.updateGroupPic(groupId,picId);
-        }catch (Exception e){
-            throw new AddPicIdErrorException("添加群组头像失败！");
-        }
-        /**将管理者选择的用户加入该群组*/
-        addUsersToGroup(userIdSet,groupId);
-        return new UsersResponse(MyEnum.CREATE_GROUP_SUCCESS,groupName+"("+groupId+")");  //如果顺利执行到此处，则说明全部加入群组成功！
     }
 
     @Override

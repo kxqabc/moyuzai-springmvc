@@ -23,9 +23,7 @@ public interface UserGroupService {
 
 
 
-    List<Long> queryAllUserIdOfGroup(long groupId);
-
-    UsersResponse addUserPicToGroup(Set<Long> userIdSet, long managerId, String groupName, int picId);
+    ServiceData queryAllUserIdOfGroup(long groupId);
 
     ServiceData addUserToGroup(long userId,long groupId)throws AddUserToGroupErrorException;
 

@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
 import java.util.*;
 
 @Service
@@ -159,21 +160,27 @@ public class GroupServiceImpl implements GroupService{
      * @return
      */
     @Override
-    public UsersResponse deleteGroup(long managerId, long groupId) {
-        //首先确定群组是否存在
-        boolean groupIsExist = checkGroupIsExist(groupId);
-        if (!groupIsExist)
-            return new UsersResponse(MyEnum.GROUP_IS_NOT_EXIST);
+    public ServiceData deleteGroup(long managerId, long groupId) {
         //确定管理员ID是否正确
         boolean isManagerOfGroup = isManagerOfThisGroup(groupId,managerId);
         if (!isManagerOfGroup)
-            return new UsersResponse(MyEnum.NOT_THE_MANAGER_OF_THIS_GROUP);
+            return new ServiceData(false,null);
         //删除群组，因为外键
-        int effectCount = groupDao.deleteGroup(managerId,groupId);
+        int effectCount;
+        try{
+            effectCount = groupDao.deleteGroup(managerId,groupId);
+        }catch (SQLException e1){
+            e1.printStackTrace();
+            throw new DeleteGroupException("删除群组时发生SQLException！");
+        }catch (Exception e){
+            e.printStackTrace();
+            throw e;
+        }
+
         if (effectCount>0)
-            return new UsersResponse(MyEnum.DISMISS_GROUP_SUCCESS);
+            return new ServiceData(true,null);
         else
-            return new UsersResponse(MyEnum.DISMISS_GROUP_FAIL);
+            return new ServiceData(false,-1,null);
     }
 
     @Override

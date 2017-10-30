@@ -140,11 +140,12 @@ public class MyController {
     public UsersResponse userGroups(@RequestParam("pageNum") int pageNum){
         logger.info("查询所有关系表数据。。");
         /**pageNum从1开始*/
-        UsersResponse usersResponse = userGroupService.getAll(STEP*(pageNum-1), STEP*pageNum);
+        UsersResponse usersResponse = serviceProxy.getAll(STEP*(pageNum-1), STEP*pageNum);
         return usersResponse;
     }
+
     /**
-     * 删除用户
+     * 删除用户()
      * @param userId
      * @return
      */
@@ -152,19 +153,19 @@ public class MyController {
     @RequestMapping(value = "/deleteUserById")
     public UsersResponse deleteUserById(@RequestParam(value = "userId")long userId){
         logger.info("删除用户。。");
-        return userService.deleteUserById(userId);
+        return serviceProxy.deleteUserById(userId);
     }
     @ResponseBody
     @RequestMapping(value = "/deleteGroupById")
     public UsersResponse deleteGroupById(@RequestParam(value = "groupId")long groupId){
         logger.info("删除群组。。");
-        return groupService.deleteGroup(groupId);
+        return serviceProxy.deleteGroup(groupId);
     }
     @ResponseBody
     @RequestMapping(value = "/deleteUserGroupById" )
     public UsersResponse deleteUserGroupById(@RequestParam(value = "id")long id){
         logger.info("删除关系表中一条数据。。");
-        return userGroupService.deleteUsersOfGroup(id);
+        return serviceProxy.deleteUserOfGroup(id);
     }
 
     /**
@@ -455,9 +456,22 @@ public class MyController {
     public UsersResponse dismissGroup(@RequestParam(value = "managerId")long managerId,
                                       @RequestParam(value = "groupId")long groupId){
         logger.info("解散群组。。");
-        List<Long> userIds = userGroupService.queryAllUserIdOfGroup(groupId);
-        UsersResponse usersResponse = groupService.deleteGroup(managerId,groupId);
-        if (usersResponse.isState()){
+        UsersResponse getUsersResponse = serviceProxy.queryAllUserIdOfGroup(groupId);
+        List<Long> userIds = null;
+        if (!DataFormatTransformUtil.isNullOrEmpty(getUsersResponse.getIdentity()))
+            userIds = (List<Long>) getUsersResponse.getIdentity();
+        UsersResponse deleteGroupResponse = null;
+        try {
+            deleteGroupResponse = serviceProxy.deleteGroup(managerId,groupId);
+        }catch (DeleteGroupException e1){
+            logger.error(e1.getMessage());
+            deleteGroupResponse = new UsersResponse(MyEnum.DISMISS_GROUP_FAIL);
+        }catch (Exception e){
+            logger.error(e.getMessage());
+            deleteGroupResponse = new UsersResponse(MyEnum.DISMISS_GROUP_FAIL);
+        }
+
+        if (deleteGroupResponse.isState()){
             //通知组内所有人该组解散
             Set<Long> userIdSet = new HashSet<>();
             userIdSet.addAll(userIds);
@@ -465,7 +479,7 @@ public class MyController {
             minaService.notifyUserGroupIsDisMissed(userIdSet,groupId);
         }
         //解散群组之前应该先记录组员
-        return usersResponse;
+        return deleteGroupResponse;
     }
 
     @ResponseBody
@@ -486,8 +500,8 @@ public class MyController {
             if (usersResponse.isState()){
                 Map<String,Object> usersMap = (Map<String, Object>) usersResponse.getIdentity();
                 if (usersMap.containsKey("unAffectedUsers")){
-                    Group group = serviceProxy.getGroupWithManName(groupId);
-                    group.setAmount(userGroupService.getAmountInGroupById(groupId));
+                    GroupResponse groupResponse = serviceProxy.getGroupWithMoreDetail(groupId);
+                    Group group = groupResponse.getGroup();
                     minaService.notifyUsersGroupMessageChange((Set<Long>) usersMap.get("unAffectedUsers"), group,addUsers);
                 }
                 if (usersMap.containsKey("addUsers"))
@@ -507,6 +521,8 @@ public class MyController {
             return new UsersResponse(MyEnum.DELETE_USER_FAIL);
         }catch (NumberFormatException e5){
             return new UsersResponse(MyEnum.STRING_FORMAT_REEOR);
+        }catch (TargetLostException e6){
+            return new UsersResponse(MyEnum.TARGET_LOST);
         }catch (Exception e){
             logger.error(e.getMessage());
             return new UsersResponse(MyEnum.INNER_REEOR);

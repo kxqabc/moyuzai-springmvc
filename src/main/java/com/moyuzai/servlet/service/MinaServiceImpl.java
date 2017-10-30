@@ -24,22 +24,6 @@ public class MinaServiceImpl implements MinaService{
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    //增加本条注释并commit
-
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private GroupService groupService;
-    @Autowired
-    private UserGroupService userGroupService;
-
-    @Autowired
-    private UserDao userDao;
-    @Autowired
-    private GroupDao groupDao;
-    @Autowired
-    private UserGroupDao userGroupDao;
-
     @Resource
     private ServerHandler serverHandler;    //mina的核心处理器，这里controller需要控制mina主动发送消息
 

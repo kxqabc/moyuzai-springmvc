@@ -2,6 +2,7 @@ package com.moyuzai.servlet.mina.core;
 
 import java.util.*;
 
+import com.googlecode.protobuf.format.JsonFormat;
 import com.moyuzai.servlet.dao.UserGroupDao;
 import com.moyuzai.servlet.entity.UserGroup;
 import com.moyuzai.servlet.mina.model.ChatModel;
@@ -117,6 +118,8 @@ public class ServerHandler extends IoHandlerAdapter {
 	 * @param protoMessage
 	 */
 	public void groupDismissNotify(Set<Long> userIdSet,long groupId,MessageProtoBuf.ProtoMessage protoMessage){
+		JsonFormat jsonFormat = new JsonFormat();       //maven中这个jar包没有导入成功!
+		String json = jsonFormat.printToString(protoMessage);//将protoMessage转换为String
 		for (long userId:userIdSet){
 			if (sessionMap.containsKey(userId)){	//表示在线
 				log.info("用户："+userId+"在线,立即推送。。");
@@ -127,18 +130,19 @@ public class ServerHandler extends IoHandlerAdapter {
 				if (DataFormatTransformUtil.isNullOrEmpty(insertedGroup)){		//表示该用户已经没有其他群组了
 
 				}else {
-					//获取之前的离线信息
-					List<MessageProtoBuf.ProtoMessage> oldMessageList = userGroupService.getOfflineText(userId);
-					//如果没有其他离线消息，就只保存这条
-					if (oldMessageList == null || "".equals(oldMessageList) || oldMessageList.size()==0){
-						userGroupService.insertOfflineText(protoMessage,userId,insertedGroup.getGroupId());
-					}else {
-						oldMessageList.add(protoMessage);
-						//将解散消息存放在该用户的其他群组的离线信息中，考虑之前该组的离线信息
-						for (MessageProtoBuf.ProtoMessage message:oldMessageList){
-							userGroupService.insertOfflineText(message,userId,insertedGroup.getGroupId());
-						}
-					}
+					userGroupDao.addToOfflineText(json+",",userId,groupId);           //追加信息
+//					//获取之前的离线信息
+//					List<MessageProtoBuf.ProtoMessage> oldMessageList = userGroupService.getOfflineText(userId);
+//					//如果没有其他离线消息，就只保存这条
+//					if (oldMessageList == null || "".equals(oldMessageList) || oldMessageList.size()==0){
+//						userGroupService.insertOfflineText(protoMessage,userId,insertedGroup.getGroupId());
+//					}else {
+//						oldMessageList.add(protoMessage);
+//						//将解散消息存放在该用户的其他群组的离线信息中，考虑之前该组的离线信息
+//						for (MessageProtoBuf.ProtoMessage message:oldMessageList){
+//							userGroupService.insertOfflineText(message,userId,insertedGroup.getGroupId());
+//						}
+//					}
 				}
 			}
 		}

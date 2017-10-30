@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import proto.MessageProtoBuf;
 
 import javax.servlet.http.HttpSession;
 import java.util.*;
@@ -190,6 +189,45 @@ public class ServiceProxyImpl implements ServiceProxy{
     }
 
     @Override
+    public GroupResponse getGroupWithMoreDetail(long groupId) throws DataClassErrorException, TargetLostException {
+        ServiceData serviceData = groupService.getGroupWithManName(groupId);
+        if (serviceData.isState()){
+            if (serviceData.getData() instanceof Group) {
+                Group group = (Group) serviceData.getData();
+                int amount = userGroupService.getAmountInGroupById(groupId);
+                group.setAmount(amount);
+                return new GroupResponse(true,group);
+            }else
+                throw new DataClassErrorException("查询数据库数据不符合期望类型！");
+        }else
+            throw new TargetLostException("目标群组丢失！");
+    }
+
+    @Override
+    public UsersResponse deleteGroup(long managerId, long groupId) {
+        ServiceData serviceData = null;
+        try {
+            serviceData = groupService.deleteGroup(managerId,groupId);
+        }catch (DeleteGroupException e1){
+            throw e1;
+        }catch (Exception e){
+            throw e;
+        }
+        if (serviceData.isState())
+            return new UsersResponse(MyEnum.DISMISS_GROUP_SUCCESS);
+        else if (serviceData.getStateNum() == 0)
+            return new UsersResponse(MyEnum.NOT_THE_MANAGER_OF_THIS_GROUP);
+        else
+            return new UsersResponse(MyEnum.DISMISS_GROUP_FAIL);
+    }
+
+    @Override
+    public UsersResponse deleteGroup(long groupId) {
+        UsersResponse usersResponse  = groupService.deleteGroup(groupId);
+        return usersResponse;
+    }
+
+    @Override
     public UsersResponse changeGroupPic(long groupId, long managerId, int picId,boolean cheched) {
         ServiceData serviceData = groupService.changeGroupPic(groupId,managerId,picId,cheched);
         if (serviceData.isState())
@@ -252,7 +290,11 @@ public class ServiceProxyImpl implements ServiceProxy{
             }
 
             //获取要通知“群组资料变化”的组员ID
-            List<Long> unTouchedUserIds = userGroupService.queryAllUserIdOfGroup(groupId);
+            List<Long> unTouchedUserIds = null;
+            ServiceData serviceData = userGroupService.queryAllUserIdOfGroup(groupId);
+            if (serviceData.isState()){
+                unTouchedUserIds = (List<Long>) serviceData.getData();
+            }
             //将用户ID保存在dto的identity中
             if (!DataFormatTransformUtil.isNullOrEmpty(unTouchedUserIds)){
                 Set<Long> unTouchUserSet = new HashSet<>();
@@ -447,43 +489,19 @@ public class ServiceProxyImpl implements ServiceProxy{
     }
 
     @Override
-    public List<Long> queryAllUserIdOfGroup(long groupId) {
-        return null;
+    public UsersResponse queryAllUserIdOfGroup(long groupId) {
+        ServiceData serviceData = userGroupService.queryAllUserIdOfGroup(groupId);
+        if (serviceData.isState()){
+            return new UsersResponse(MyEnum.GET_USER_SUCCESS,serviceData.getData());
+        }else
+            return new UsersResponse(MyEnum.USER_NOT_FOUND);
     }
 
     @Override
-    public UsersResponse addUserPicToGroup(Set<Long> userIdSet, long managerId, String groupName, int picId) {
-        return null;
+    public UsersResponse deleteUserOfGroup(long id) {
+        UsersResponse usersResponse = userGroupService.deleteUsersOfGroup(id);
+        return usersResponse;
     }
 
-    @Override
-    public ServiceData addUserToGroup(long userId, long groupId) {
-        return null;
-    }
-
-    @Override
-    public void addUsersToGroup(Set<Long> userIdSet, long groupId) {
-
-    }
-
-    @Override
-    public void deleteUsersOfGroup(Set<Long> userIdSet, long groupId) {
-
-    }
-
-    @Override
-    public UsersResponse deleteUsersOfGroup(long id) {
-        return null;
-    }
-
-    @Override
-    public int insertOfflineText(MessageProtoBuf.ProtoMessage protoMessage, long userId, long groupId) {
-        return 0;
-    }
-
-    @Override
-    public List<MessageProtoBuf.ProtoMessage> getOfflineText(long userId) {
-        return null;
-    }
 
 }
