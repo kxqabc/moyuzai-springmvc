@@ -54,6 +54,12 @@ public class MessageCodeFactory implements ProtocolCodecFactory {
 
 	}
 
+	/**
+	 * 这个方法是mina的解码器，十分重要，其中对于断包、粘包等处理需要认真思考，特别是对于剩余未读字节的判断以及对返回值的使用
+	 * 返回值：
+	 * 		 1）若此次解码后IoBuffer中仍有数据没有被处理完，则返回true，以调用解码方法再次进行解码
+	 * 		 2）若此次解码后IoBuffer中的数据不够一次解析，则返回false，等待下次再有数据到来再解码
+	 */
 	class MyDecoder extends CumulativeProtocolDecoder {
 		@Override
 		protected boolean doDecode(IoSession ioSession, IoBuffer in, ProtocolDecoderOutput out) throws Exception {
@@ -61,7 +67,7 @@ public class MessageCodeFactory implements ProtocolCodecFactory {
 			if (in.remaining() < 4) {
 				return false;
 			} else {
-				// 标记开始位置，如果一条消息没传输完成则返回到这个位置
+				// 标记开始位置，如果一条消息没传输完成则返回到这个位置，以便reset
 				in.mark();
 				// 读取header部分，获取body长度(长度单位：字节数)
 				int bodyLength = in.getInt();
@@ -74,7 +80,7 @@ public class MessageCodeFactory implements ProtocolCodecFactory {
 					byte[] bodyBytes = new byte[bodyLength];
 					in.get(bodyBytes); // 读取body部分
 					logger.info("decoderLog.body:"+DataFormatTransformUtil.bytesToHexString(bodyBytes));
-					ProtoMessage message = ProtoMessage.parseFrom(bodyBytes); // 将body中protobuf字节码转成Student对象
+					ProtoMessage message = ProtoMessage.parseFrom(bodyBytes); // 将body中protobuf字节码转成ProtoMessage对象
 					out.write(message); // 解析出一条消息
 					return true;
 				}

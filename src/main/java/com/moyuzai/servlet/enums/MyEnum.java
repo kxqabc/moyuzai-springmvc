@@ -51,7 +51,8 @@ public enum MyEnum {
     PASSWORD_ERROR(false,-26,"密码错误！"),
     NOT_THE_MANAGER_OF_THIS_GROUP(false,-27,"对不起，您不是该群组的管理员！操作无效！"),
     CHANG_GROUP_NAME_FAIL(false,-28,"修改群组名称失败！"),
-    STRING_FORMAT_REEOR(false,-29,"字符串转数组出现错误！请核对数据。");
+    STRING_FORMAT_REEOR(false,-29,"字符串转数组出现错误！请核对数据。"),
+    DATABASE_CLASS_ERROR(false,-30,"查询数据库数据不符合期望类型！");
 
     private boolean state;
     private int stateNum;

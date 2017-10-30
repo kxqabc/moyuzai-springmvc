@@ -48,6 +48,7 @@ public class ServerHandler extends IoHandlerAdapter {
 	@Override
 	public void messageReceived(IoSession session, Object message) throws Exception {
 		MessageProtoBuf.ProtoMessage protoMessage = (MessageProtoBuf.ProtoMessage) message;
+		log.info("protobufTime:"+protoMessage.getTime());
 		log.info("recieve:" + protoMessage);
 		Type type = protoMessage.getType();
 		if(type == Type.CHAT){
@@ -141,6 +142,10 @@ public class ServerHandler extends IoHandlerAdapter {
 				}
 			}
 		}
+	}
+
+	private void updateTime(MessageProtoBuf.ProtoMessage message){
+//		message.t
 	}
 
 

@@ -33,6 +33,24 @@ public class DataFormatTransformUtil{
         return builder.build();
     }
 
+    /**
+     * 加上信息发送的时间，也作为这条信息的标识符
+     * @param type
+     * @param sendTime
+     * @param body
+     * @return
+     */
+    public static MessageProtoBuf.ProtoMessage packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type type, String sendTime,
+                                                                           String body){
+        MessageProtoBuf.ProtoMessage.Builder builder =
+                MessageProtoBuf.ProtoMessage.newBuilder();
+        builder.setType(type);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        builder.setTime(sendTime + "," + dateFormat.format(new Date()));
+        builder.setBody(body);
+        return builder.build();
+    }
+
     public static Set<Long> StringToLongSet(String message)
     throws NumberFormatException{
         if (message == null || "".equals(message))
@@ -71,22 +89,18 @@ public class DataFormatTransformUtil{
 
     public static <T> boolean isNullOrEmpty(T data){
         if (data == null){
-            System.out.println("isNullOrEmpty.null:");
             return true;
         }
         //字符串
         if (data instanceof CharSequence){
-            System.out.println("isNullOrEmpty.char:");
             return ((CharSequence)(CharSequence) data).length()==0;
         }
         //集合
         if (data instanceof Collection){
-            System.out.println("isNullOrEmpty.coll:");
             return ((Collection)data).isEmpty();
         }
         //Map
         if (data instanceof Map){
-            System.out.println("isNullOrEmpty.map:");
             return ((Map) data).isEmpty();
         }
         return false;

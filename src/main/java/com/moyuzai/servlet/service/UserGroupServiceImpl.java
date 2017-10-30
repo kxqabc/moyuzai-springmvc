@@ -5,6 +5,7 @@ import com.googlecode.protobuf.format.JsonFormat;
 import com.moyuzai.servlet.dao.GroupDao;
 import com.moyuzai.servlet.dao.UserDao;
 import com.moyuzai.servlet.dao.UserGroupDao;
+import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.entity.User;
@@ -14,6 +15,7 @@ import com.moyuzai.servlet.exception.AddPicIdErrorException;
 import com.moyuzai.servlet.exception.AddUserToGroupErrorException;
 import com.moyuzai.servlet.exception.DeleteUserException;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
+import com.sun.org.apache.bcel.internal.generic.RET;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -21,8 +23,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import proto.MessageProtoBuf;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -66,38 +70,12 @@ public class UserGroupServiceImpl implements UserGroupService {
     }
 
     @Override
-    public UsersResponse getUsersOfGroup(long groupId) {
+    public ServiceData getUsersOfGroup(long groupId) {
         List<User> users = userGroupDao.queryUsersBYGroupId(groupId);
         if (DataFormatTransformUtil.isNullOrEmpty(users))
-            return new UsersResponse(MyEnum.USER_NOT_FOUND);
+            return new ServiceData(false,null);
         else
-            return new UsersResponse(MyEnum.GET_USER_SUCCESS,users);
-    }
-
-    /**
-     * 加入群组
-     * @param userId
-     * @param groupId
-     * @return
-     */
-    @Override
-    public UsersResponse joinGroup(long userId, long groupId) {
-        /**判断用户、群组是否存在*/
-        boolean isUserExist = userService.isUserExist(userId);
-        boolean isGroupExist = groupService.checkGroupIsExist(groupId);
-        if (!isUserExist || !isGroupExist)
-            return new UsersResponse(MyEnum.GROUP_USER_INFO_ERROR);
-        /**判断用户是否已经加入群组，防止重复加入同一个群组*/
-        boolean isJoined = isJoined(groupId,userId);
-        if (isJoined)
-            return new UsersResponse(MyEnum.IS_JOINED);
-        /**执行加入动作*/
-        int resultCount = userGroupDao.saveUserGroup(groupId,userId);
-        if (resultCount>0){
-            return new UsersResponse(MyEnum.JOIN_GROUP_SUCCESS);
-        }
-        else
-            return new UsersResponse(MyEnum.JOIN_GROUP_FAIL);
+            return new ServiceData(true,null);
     }
 
     /**
@@ -107,21 +85,28 @@ public class UserGroupServiceImpl implements UserGroupService {
      * @return
      */
     @Override
-    public UsersResponse signoutFromGroup(long userId, long groupId) {
+    public ServiceData signoutFromGroup(long userId, long groupId) {
         boolean isJoined = isJoined(groupId,userId);
         /**是否是该群组成员*/
         if (!isJoined)
-            return new UsersResponse(MyEnum.NOT_IN_GROUP_ERROR);
+            return new ServiceData(false,null);
         /**退出群组动作*/
-        int resultCount = userGroupDao.deleteUserGroup(groupId,userId);
-        if (resultCount>0){
-            MyEnum.SIGNOUT_SUCCESS.setStateInfo("退出群"+groupId+"成功！");
-            //通知其他人有人退群了
-
-        }else{
-            MyEnum.SIGNOUT_GROUP_FAIL.setStateInfo("退出群"+groupId+"失败！");
+        int resultCount;
+        try{
+            resultCount = userGroupDao.deleteUserGroup(groupId,userId);
+        }catch (SQLException e1){
+            throw new DeleteUserException("删除用户发生SQLException！");
+        }catch (Exception e){
+            logger.error(e.getMessage());
+            throw e;
         }
-        return new UsersResponse(MyEnum.SIGNOUT_SUCCESS);
+
+        if (resultCount>0){
+            return new ServiceData(true,null);
+            //通知其他人有人退群了
+        }else{
+            return new ServiceData(false,-1,null);
+        }
     }
 
     /**
@@ -254,24 +239,40 @@ public class UserGroupServiceImpl implements UserGroupService {
         return new UsersResponse(MyEnum.CREATE_GROUP_SUCCESS,groupName+"("+groupId+")");  //如果顺利执行到此处，则说明全部加入群组成功！
     }
 
+    @Override
+    public ServiceData addUserToGroup(long userId, long groupId)throws AddUserToGroupErrorException{
+        //需要调用者首先检验下群组信息和用户信息是否符合要求
+        int effectCount;
+        try{
+            effectCount = userGroupDao.saveUserGroup(groupId,userId);
+        }catch (SQLException e){
+            logger.error(e.getMessage());
+            throw new AddUserToGroupErrorException("向群组中添加用户时出错！");
+        }
+        if (effectCount>0)
+            return new ServiceData(true,null);
+        else
+            return new ServiceData(false,null);
+    }
+
     /**
      * 将管理者选择的用户加入该群组
      * @param userIdSet
      * @param groupId
      */
+    @Transactional
     @Override
     public void addUsersToGroup(Set<Long> userIdSet,long groupId)
     throws AddUserToGroupErrorException{
         Iterator<Long> iterator = userIdSet.iterator();
         /**将管理者选择的用户加入该群组*/
-        while (iterator.hasNext()) {
-            try {
+        try {
+            while (iterator.hasNext()) {
                 userGroupDao.saveUserGroup(groupId, iterator.next());
-            }catch (Exception e){
-                logger.error("用户加入群组出现错误！");
-                logger.error(e.getMessage());
-                throw new AddUserToGroupErrorException("用户加入群组出现错误！");
             }
+        }catch (Exception e){
+            logger.error(e.getMessage());
+            throw new AddUserToGroupErrorException("用户加入群组出现错误！");
         }
     }
 

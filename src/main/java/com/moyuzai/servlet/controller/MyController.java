@@ -6,13 +6,10 @@ import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.exception.*;
-import com.moyuzai.servlet.service.GroupService;
-import com.moyuzai.servlet.service.MinaService;
-import com.moyuzai.servlet.service.UserGroupService;
+import com.moyuzai.servlet.service.*;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import com.sun.org.apache.regexp.internal.RE;
 import org.slf4j.Logger;
-import com.moyuzai.servlet.service.UserService;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -44,13 +41,7 @@ public class MyController {
 
 
     @Autowired
-    private UserService userService;
-    @Autowired
-    private GroupService groupService;
-    @Autowired
-    private UserGroupService userGroupService;
-    @Autowired
-    private MinaService minaService;
+    private ServiceProxy serviceProxy;
 
     /**
      * 请求转发器，由于采用了标准的格式而没有使用restful风格url，试图通过请求参数“type”转发请求，
@@ -99,7 +90,13 @@ public class MyController {
     public UsersResponse queryUserById(@RequestParam("id") long id){
         logger.info("按ID查询用户。。");
         logger.info("id:"+id);
-        UsersResponse usersResponse = userService.getUserById(id);
+        UsersResponse usersResponse = null;
+        try {
+            usersResponse = serviceProxy.getUserById(id);
+        } catch (DataClassErrorException e) {
+            e.printStackTrace();
+            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
+        }
         logger.info(usersResponse.toString());
         return usersResponse;
     }
@@ -113,7 +110,7 @@ public class MyController {
                                           HttpSession httpSession){
         logger.info("发送短信获取验证码。。");
         logger.info("mobile:"+mobile);
-        UsersResponse usersResponse = userService.sendLoginMessage(mobile,httpSession);
+        UsersResponse usersResponse = serviceProxy.sendLoginMessage(mobile,httpSession);
         logger.info(usersResponse.toString());
         return usersResponse;
     }
@@ -127,8 +124,7 @@ public class MyController {
         logger.info("查询所有用户。。");
         logger.info("pageNum:"+pageNum);
         /**pageNum从1开始*/
-        UsersResponse usersResponse = userService.getAllUsers(STEP*(pageNum-1), STEP*pageNum);
-//        logger.info(usersResponse.toString());
+        UsersResponse usersResponse = serviceProxy.getAllUsers(STEP*(pageNum-1), STEP*pageNum);
         return usersResponse;
     }
     @ResponseBody
@@ -136,7 +132,7 @@ public class MyController {
     public UsersResponse groups(@RequestParam("pageNum") int pageNum){
         logger.info("查询所有群组。。");
         /**pageNum从1开始*/
-        UsersResponse usersResponse = groupService.getAllGroups(STEP*(pageNum-1), STEP*pageNum);
+        UsersResponse usersResponse = serviceProxy.getAllGroups(STEP*(pageNum-1), STEP*pageNum);
         return usersResponse;
     }
     @ResponseBody
@@ -165,7 +161,7 @@ public class MyController {
         return groupService.deleteGroup(groupId);
     }
     @ResponseBody
-    @RequestMapping(value = "/deleteUserGroupById")
+    @RequestMapping(value = "/deleteUserGroupById" )
     public UsersResponse deleteUserGroupById(@RequestParam(value = "id")long id){
         logger.info("删除关系表中一条数据。。");
         return userGroupService.deleteUsersOfGroup(id);
@@ -180,16 +176,23 @@ public class MyController {
                                            HttpSession httpSession){
         logger.info("按手机号码查询用户。。");
         logger.info("mobile:"+mobile);
-        UsersResponse usersResponse = userService.getUserByMobile(mobile);
+        UsersResponse usersResponse = null;
+        try {
+            usersResponse = serviceProxy.getUserByMobile(mobile);
+        } catch (DataClassErrorException e) {
+            e.printStackTrace();
+            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
+        }
         logger.info(usersResponse.toString());
         return usersResponse;
     }
+
     @ResponseBody
     @RequestMapping(value = "/getUsersOfGroup")
     public UsersResponse getUsersOfGroup(@RequestParam("groupId") long groupId){
         logger.info("按群组ID查询用户。。");
         logger.info("groupId:"+groupId);
-        UsersResponse usersResponse = userGroupService.getUsersOfGroup(groupId);
+        UsersResponse usersResponse = serviceProxy.getUsersOfGroup(groupId);
         logger.info(usersResponse.toString());
         return usersResponse;
     }
@@ -231,9 +234,14 @@ public class MyController {
         if (DataFormatTransformUtil.isNullOrEmpty(mobile))
             return new UsersResponse(MyEnum.NO_MOBILE_FOUND); //获取不到手机号
         else{
-            return userService.userRegister(userName,mobile,password);
+            try {
+                return serviceProxy.userRegister(userName,mobile,password);
+            } catch (DataClassErrorException e) {
+                e.printStackTrace();
+                return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
             }
         }
+    }
 
     /**
      * 登录
@@ -246,7 +254,14 @@ public class MyController {
     public UsersResponse login(@RequestParam("mobile")String mobile,
                                @RequestParam("password")String password){
         logger.info("用户登录。。");
-        return userService.userLogin(mobile,password);
+        UsersResponse usersResponse = null;
+        try {
+            usersResponse =  serviceProxy.userLogin(mobile,password);
+        } catch (DataClassErrorException e) {
+            e.printStackTrace();
+            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
+        }
+        return usersResponse;
     }
 
     /**
@@ -262,7 +277,7 @@ public class MyController {
         logger.info("mobile in httpSession:"+mobile);
         if (DataFormatTransformUtil.isNullOrEmpty(mobile))
             return paramNotFound();
-        return userService.justifyPassword(mobile,password);
+        return serviceProxy.justifyPassword(mobile,password);
     }
 
     /**
@@ -276,7 +291,8 @@ public class MyController {
     public UsersResponse sendResetPasswordMessage(@RequestParam("mobile") String mobile,
                                               HttpSession httpSession){
         logger.info("发送请求“重置密码”短信。。");
-        return userService.sendResetMessage(mobile,httpSession);
+        UsersResponse usersResponse = serviceProxy.sendResetMessage(mobile,httpSession);
+        return usersResponse;
     }
 
     /**
@@ -292,8 +308,17 @@ public class MyController {
         logger.info("创建群组（不包含群组头像等信息）。。");
         logger.info("groupName:"+groupName);
         logger.info("managerId:"+managerId);
-        UsersResponse usersResponse = groupService.createGroup(groupName,managerId);
-        logger.info(usersResponse.toString());
+        UsersResponse usersResponse;
+        try{
+            usersResponse = serviceProxy.createGroup(groupName,managerId);
+        }catch (CreateGroupErrorException e1){
+            return new UsersResponse(MyEnum.CREATE_GROUP_FAIL);
+        }catch (AddUserToGroupErrorException e2){
+            return new UsersResponse(MyEnum.CREATE_GROUP_FAIL);
+        }catch (Exception e){
+            logger.info(e.getMessage());
+            return new UsersResponse(MyEnum.INNER_REEOR);
+        }
         return usersResponse;
     }
 
@@ -328,7 +353,7 @@ public class MyController {
             return paramNotFound();
         /**进行“事务”操作，若出现runtimeException则rollback，否则commit*/
         try {
-            UsersResponse usersResponse = groupService.createGroupWithInit(userIdSet,managerId,groupName,picId);
+            UsersResponse usersResponse = serviceProxy.createGroupWithInit(userIdSet,managerId,groupName,picId);
             /**全部操作成功后，则通知所有组员已经被拉入该群组*/
             if (usersResponse.isState()){
                 //除去管理员，不用通知他
@@ -359,7 +384,14 @@ public class MyController {
     @RequestMapping(value = "/getGroupById")
     public GroupResponse getGroupById(@RequestParam(value = "groupId")long groupId){
         logger.info("根据群组ID查询群组信息。。");
-        return groupService.getGroupById(groupId);
+        GroupResponse groupResponse = null;
+        try {
+            groupResponse = serviceProxy.getGroupById(groupId);
+        } catch (DataClassErrorException e) {
+            e.printStackTrace();
+            return new GroupResponse(MyEnum.DATABASE_CLASS_ERROR);
+        }
+        return groupResponse;
     }
 
     /**
@@ -373,7 +405,13 @@ public class MyController {
     public UsersResponse joinGroup(@RequestParam(value = "userId")long userId,
                                    @RequestParam(value = "groupId")long groupId){
         logger.info("申请加入群组。。");
-        UsersResponse usersResponse = userGroupService.joinGroup(userId,groupId);
+        UsersResponse usersResponse = null;
+        try{
+            usersResponse = serviceProxy.joinGroup(userId,groupId);
+        }catch (AddUserToGroupErrorException e1){
+            return new UsersResponse(MyEnum.JOIN_GROUP_FAIL);
+        }
+
         if (usersResponse.isState()){
             //通知其他人有人加入该群组
             minaService.notifySomeJoined(groupId,userId);
@@ -392,7 +430,18 @@ public class MyController {
     public UsersResponse signoutFromGroup(@RequestParam(value = "userId")long userId,
                                           @RequestParam(value = "groupId")long groupId){
         logger.info("退出群组。。");
-        return userGroupService.signoutFromGroup(userId,groupId);
+        UsersResponse usersResponse = null;
+        try{
+            usersResponse = serviceProxy.signoutFromGroup(userId,groupId);
+        }catch (DeleteUserException e1){
+            MyEnum.SIGNOUT_GROUP_FAIL.setStateInfo("退出群"+groupId+"失败！");
+            return new UsersResponse(MyEnum.SIGNOUT_GROUP_FAIL);
+        }catch (Exception e){
+            logger.error(e.getMessage());
+            MyEnum.SIGNOUT_GROUP_FAIL.setStateInfo("退出群"+groupId+"失败！");
+            return new UsersResponse(MyEnum.SIGNOUT_GROUP_FAIL);
+        }
+        return usersResponse;
     }
 
     /**
@@ -431,13 +480,13 @@ public class MyController {
         logger.info("修改群组资料。。");
         logger.info("picId:"+picId+",groupName:"+groupName+",users:"+addUsers+"/"+minusUsers);
         try {
-            UsersResponse usersResponse = groupService.updateGroupDate(groupId,
+            UsersResponse usersResponse = serviceProxy.updateGroupDate(groupId,
                             managerId,picId,groupName,addUsers,minusUsers);
             //如果操作成功，通知群内其他所有人
             if (usersResponse.isState()){
                 Map<String,Object> usersMap = (Map<String, Object>) usersResponse.getIdentity();
                 if (usersMap.containsKey("unAffectedUsers")){
-                    Group group = groupService.getGroupWithManName(groupId);
+                    Group group = serviceProxy.getGroupWithManName(groupId);
                     group.setAmount(userGroupService.getAmountInGroupById(groupId));
                     minaService.notifyUsersGroupMessageChange((Set<Long>) usersMap.get("unAffectedUsers"), group,addUsers);
                 }

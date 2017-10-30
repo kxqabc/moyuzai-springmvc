@@ -1,8 +1,11 @@
 package com.moyuzai.servlet.service;
 
+import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.dto.UsersResponse;
+import com.moyuzai.servlet.exception.AddUserToGroupErrorException;
 import proto.MessageProtoBuf;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 
@@ -14,19 +17,17 @@ public interface UserGroupService {
 
     int getAmountInGroupById(long groupId);
 
-    UsersResponse getUsersOfGroup(long groupId);
+    ServiceData getUsersOfGroup(long groupId);
 
-    UsersResponse joinGroup(long userId, long groupId);
+    ServiceData signoutFromGroup(long userId, long groupId);
 
-    UsersResponse signoutFromGroup(long userId, long groupId);
 
-    boolean isJoined(long groupId,long userId);
-
-    boolean isJoined(long groupId,Set<Long> userSet);
 
     List<Long> queryAllUserIdOfGroup(long groupId);
 
     UsersResponse addUserPicToGroup(Set<Long> userIdSet, long managerId, String groupName, int picId);
+
+    ServiceData addUserToGroup(long userId,long groupId)throws AddUserToGroupErrorException;
 
     void addUsersToGroup(Set<Long> userIdSet,long groupId);
 
@@ -39,6 +40,10 @@ public interface UserGroupService {
 
     List<MessageProtoBuf.ProtoMessage> getOfflineText(long userId);
 
+    //工具方法
+    boolean isJoined(long groupId,long userId);
+
+    boolean isJoined(long groupId,Set<Long> userSet);
 //    proto.MessageProtoBuf.ProtoMessage getOfflineText(long userId,long groupId);
 
 }

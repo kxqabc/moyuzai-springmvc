@@ -1,6 +1,7 @@
 package com.moyuzai.servlet.service;
 
 import com.moyuzai.servlet.dto.GroupResponse;
+import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.enums.MyEnum;
@@ -9,25 +10,23 @@ import java.util.Set;
 
 public interface GroupService {
 
-    UsersResponse getAllGroups(int offset, int limit);
+    ServiceData getAllGroups(int offset, int limit);
 
-    GroupResponse getGroupById(long groupId);
+    ServiceData getGroupById(long groupId);
 
     Group queryGroupByGroupNameManId(String groupName, long managerId);
 
-    Group getGroupWithManName(long groupId);
+    ServiceData getGroupWithManName(long groupId);
 
-    UsersResponse changeGroupPic(long groupId,long managerId,int picId);
+    ServiceData changeGroupPic(long groupId,long managerId,int picId,boolean checked);
 
-    UsersResponse changeGroupName(long groupId,long managerId,String groupName);
+    ServiceData changeGroupName(long groupId,long managerId,String groupName,boolean checked);
 
-    UsersResponse updateGroupDate(long groupId,long managerId,Integer picId,
-                                  String groupName,String addUsers,String minusUsers);
+    ServiceData createGroup(String groupName, long managerId);
 
-    UsersResponse createGroup(String groupName, long managerId);
+    UsersResponse deleteGroup(long managerId,long groupId);
 
-    UsersResponse createGroupWithInit(Set<Long> userIdSet,long managerId,String groupName,int picId);
-
+    UsersResponse deleteGroup(long groupId);
     /**工具方法*/
     boolean checkGroupIsExist(String groupName, long managerId);
 
@@ -35,8 +34,6 @@ public interface GroupService {
 
     boolean isManagerOfThisGroup(long groupId,long managerId);
 
-    UsersResponse deleteGroup(long managerId,long groupId);
 
-    UsersResponse deleteGroup(long groupId);
 
 }

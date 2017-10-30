@@ -1,5 +1,6 @@
 package com.moyuzai.servlet.service;
 
+import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.enums.MyEnum;
@@ -13,26 +14,26 @@ import java.util.Set;
  */
 public interface UserService {
     /**查询*/
-    UsersResponse getUserById(long id);
+    ServiceData getUserById(long id);
 
-    UsersResponse getUserByMobile(String mobile);
+    ServiceData getUserByMobile(String mobile);
 
-    UsersResponse userLogin(String mobile,String password);
+    ServiceData userLogin(String mobile,String password);
 
-    UsersResponse getAllUsers(int offset, int limit);
+    ServiceData getAllUsers(int offset, int limit);
 
-    String getUsersName(Set<Long> userIdSet);
+    ServiceData getUsersName(Set<Long> userIdSet);
 
-    UsersResponse sendLoginMessage(String mobile,HttpSession httpSession);
+    ServiceData sendLoginMessage(String mobile,HttpSession httpSession);
 
-    UsersResponse sendResetMessage(String mobile,HttpSession httpSession);
+    ServiceData sendResetMessage(String mobile,HttpSession httpSession);
     /**修改*/
-    UsersResponse justifyPassword(String mobile, String newPassword);
+    ServiceData justifyPassword(String mobile, String newPassword);
 
     /**插入*/
-    UsersResponse userRegister(String userName,String mobile,String password);
+    ServiceData userRegister(String userName,String mobile,String password);
 
-    UsersResponse deleteUserById(long userId);      //需不需要删除关系表中的信息？
+    ServiceData deleteUserById(long userId);      //需不需要删除关系表中的信息？
     /**工具方法*/
     boolean isUserExist(long managerId);
 
