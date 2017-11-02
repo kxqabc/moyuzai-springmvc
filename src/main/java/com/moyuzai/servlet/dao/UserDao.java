@@ -1,10 +1,8 @@
 package com.moyuzai.servlet.dao;
 
 import com.moyuzai.servlet.entity.User;
-import javafx.scene.chart.ValueAxis;
 import org.apache.ibatis.annotations.Param;
-import org.springframework.web.bind.annotation.PathVariable;
-
+import org.springframework.dao.DataAccessException;
 import java.util.List;
 
 /**
@@ -29,12 +27,12 @@ public interface UserDao {
 
     /**修改*/
     int updateByMobile(@Param(value = "mobile") String mobile,
-                       @Param(value = "password") String password);
+                       @Param(value = "password") String password)throws DataAccessException;
 
     /**插入*/
     int insertUser(@Param(value = "userName") String userName,
                    @Param(value = "mobile") String mobile,
-                   @Param(value = "password") String password);
+                   @Param(value = "password") String password)throws DataAccessException;
 
     int deleteUserById(@Param(value = "userId")long userId);
 

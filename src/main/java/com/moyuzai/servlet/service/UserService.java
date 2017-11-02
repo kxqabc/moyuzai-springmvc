@@ -4,8 +4,10 @@ import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.enums.MyEnum;
+import org.springframework.dao.DataAccessException;
 
 import javax.servlet.http.HttpSession;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 
@@ -28,10 +30,10 @@ public interface UserService {
 
     ServiceData sendResetMessage(String mobile,HttpSession httpSession);
     /**修改*/
-    ServiceData justifyPassword(String mobile, String newPassword);
+    ServiceData justifyPassword(String mobile, String newPassword)throws DataAccessException;
 
     /**插入*/
-    ServiceData userRegister(String userName,String mobile,String password);
+    ServiceData userRegister(String userName,String mobile,String password) throws DataAccessException;
 
     ServiceData deleteUserById(long userId);      //需不需要删除关系表中的信息？
     /**工具方法*/

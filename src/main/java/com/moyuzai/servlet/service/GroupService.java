@@ -5,6 +5,8 @@ import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.enums.MyEnum;
+import com.moyuzai.servlet.exception.CreateGroupErrorException;
+import org.springframework.dao.DataAccessException;
 
 import java.util.Set;
 
@@ -22,7 +24,7 @@ public interface GroupService {
 
     ServiceData changeGroupName(long groupId,long managerId,String groupName,boolean checked);
 
-    ServiceData createGroup(String groupName, long managerId);
+    ServiceData createGroup(String groupName, long managerId)throws CreateGroupErrorException;
 
     ServiceData deleteGroup(long managerId,long groupId);
 

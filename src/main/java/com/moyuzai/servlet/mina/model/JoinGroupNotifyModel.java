@@ -1,6 +1,8 @@
 package com.moyuzai.servlet.mina.model;
 
 import com.google.gson.Gson;
+import com.moyuzai.servlet.dto.ServiceData;
+import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.exception.IoSessionIllegalException;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
@@ -25,22 +27,25 @@ public class JoinGroupNotifyModel extends NotifyModel implements NotifyUser{
 
     @Override
     protected boolean packingProtoMessage() {
+
         long userId = (long) paramterMap.get("userId");
         if (DataFormatTransformUtil.isNullOrEmpty(userId))
-            return false;
-
-        String userName = (String) paramterMap.get("userName");
-        if (DataFormatTransformUtil.isNullOrEmpty(userName))
             return false;
 
         groupId = (long) paramterMap.get("groupId");
         if (DataFormatTransformUtil.isNullOrEmpty(groupId))
             return false;
 
-        int usersAmount = (int) paramterMap.get("usersAmount");
-        if (DataFormatTransformUtil.isNullOrEmpty(usersAmount))
+        //查询新加入成员姓名
+        ServiceData userData = userService.getUserById(userId);
+        String userName;
+        if (userData.isState()){
+            userName = ((User)userData.getData()).getUserName();
+        }else
             return false;
-
+        //查询群组内组员数量
+        int usersAmount = userGroupService.getAmountInGroupById(groupId);
+        //将信息转换为json
         Map<String,Object> jsonMap = new HashMap<>();
         jsonMap.put("userId",userId);
         jsonMap.put("userName",userName);

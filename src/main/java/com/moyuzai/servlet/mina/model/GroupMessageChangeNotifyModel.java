@@ -1,6 +1,7 @@
 package com.moyuzai.servlet.mina.model;
 
 import com.google.gson.Gson;
+import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.exception.IoSessionIllegalException;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
@@ -46,8 +47,20 @@ public class GroupMessageChangeNotifyModel extends NotifyModel implements Notify
         if (DataFormatTransformUtil.isNullOrEmpty(managerName))
             return false;
 
-        String addUsersName = (String) paramterMap.get("addUsersName");
-        if (DataFormatTransformUtil.isNullOrEmpty(addUsersName))
+        String addUserIds = (String) paramterMap.get("addUsers");
+        if (DataFormatTransformUtil.isNullOrEmpty(addUserIds))
+            return false;
+
+        Set<Long> addUserSet = DataFormatTransformUtil.StringToLongSet(addUserIds);
+        String addUsersName;
+        if (!DataFormatTransformUtil.isNullOrEmpty(addUserSet)){
+            ServiceData addUsersNameData = userService.getUsersName(addUserSet);
+            if (addUsersNameData.isState()){
+                addUsersName = (String) addUsersNameData.getData();
+                addUsersName = addUsersName.substring(0,addUsersName.length()-1);
+            }else
+                return false;
+        }else
             return false;
 
         Map<String,Object> jsonMap = new HashMap<>();

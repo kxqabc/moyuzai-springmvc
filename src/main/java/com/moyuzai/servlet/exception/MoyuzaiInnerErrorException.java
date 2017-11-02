@@ -1,6 +1,8 @@
 package com.moyuzai.servlet.exception;
 
-public class MoyuzaiInnerErrorException extends RuntimeException {
+import org.springframework.dao.DataAccessException;
+
+public class MoyuzaiInnerErrorException extends DataAccessException {
 
     public MoyuzaiInnerErrorException(String message) {
         super(message);

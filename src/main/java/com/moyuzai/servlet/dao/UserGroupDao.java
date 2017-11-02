@@ -3,6 +3,7 @@ package com.moyuzai.servlet.dao;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.entity.UserGroup;
 import org.apache.ibatis.annotations.Param;
+import org.springframework.dao.DataAccessException;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -28,7 +29,7 @@ public interface UserGroupDao {
 
     /**新增一个关系表内容*/
     int saveUserGroup(@Param("groupId")long groupId,
-                      @Param("userId")long userId)throws SQLException;
+                      @Param("userId")long userId)throws DataAccessException;
 
     /**去除一个关系表内容*/
     int deleteUserGroup(@Param("groupId")long groupId,

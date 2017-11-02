@@ -1,6 +1,8 @@
 package com.moyuzai.servlet.exception;
 
-public class ChangeGroupNameException extends RuntimeException {
+import org.springframework.dao.DataAccessException;
+
+public class ChangeGroupNameException extends DataAccessException {
     public ChangeGroupNameException(String message) {
         super(message);
     }

@@ -35,7 +35,7 @@ public enum MyEnum {
     NEVER_REGISTER(false,-10,"手机号未注册！"),
     GROUP_EXIST(false,-11,"创建失败！群组已存在。"),
     MANAGER_ERROR(false,-12,"管理者id出错，请核对用户信息！"),
-    CREATE_GROUP_FAIL(false,-13,"创建失败！群组已存在。"),
+    CREATE_GROUP_FAIL(false,-13,"创建群组失败！"),
     USERS_NOT_REGISTER(false,-14,"所添加的用户信息错误！"),
     ADD_GROUP_PIC_FAIL(false,-15,"添加头像失败！"),
     REMAIN_USERS(false,-16,"因部分用户添加入群组失败，使群组创建失败！"),
@@ -53,7 +53,8 @@ public enum MyEnum {
     CHANG_GROUP_NAME_FAIL(false,-28,"修改群组名称失败！"),
     STRING_FORMAT_REEOR(false,-29,"字符串转数组出现错误！请核对数据。"),
     DATABASE_CLASS_ERROR(false,-30,"查询数据库数据不符合期望类型！"),
-    TARGET_LOST(false,-31,"查询目标已经不存在！");
+    TARGET_LOST(false,-31,"查询目标已经不存在！"),
+    SQLEXCEPTION(false,-32,"数据库执行SQL语句时发生错误！");
 
     private boolean state;
     private int stateNum;

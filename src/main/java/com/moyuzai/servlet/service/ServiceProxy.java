@@ -7,9 +7,11 @@ import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.exception.DataClassErrorException;
 import com.moyuzai.servlet.exception.TargetLostException;
+import org.springframework.dao.DataAccessException;
 import proto.MessageProtoBuf;
 
 import javax.servlet.http.HttpSession;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 
@@ -19,7 +21,7 @@ public interface ServiceProxy {
 
     UsersResponse getUserByMobile(String mobile) throws DataClassErrorException;
 
-    UsersResponse userLogin(String mobile,String password) throws DataClassErrorException;
+    UsersResponse userLogin(String mobile,String password);
 
     UsersResponse getAllUsers(int offset, int limit);
 
@@ -29,10 +31,10 @@ public interface ServiceProxy {
 
     UsersResponse sendResetMessage(String mobile,HttpSession httpSession);
     /**修改*/
-    UsersResponse justifyPassword(String mobile, String newPassword);
+    UsersResponse justifyPassword(String mobile, String newPassword)throws DataAccessException;
 
     /**插入*/
-    UsersResponse userRegister(String userName,String mobile,String password) throws DataClassErrorException;
+    UsersResponse userRegister(String userName,String mobile,String password) throws DataClassErrorException, DataAccessException;
 
     UsersResponse deleteUserById(long userId);      //需不需要删除关系表中的信息？
 

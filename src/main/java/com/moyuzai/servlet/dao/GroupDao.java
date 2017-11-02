@@ -2,6 +2,7 @@ package com.moyuzai.servlet.dao;
 
 import com.moyuzai.servlet.entity.Group;
 import org.apache.ibatis.annotations.Param;
+import org.springframework.dao.DataAccessException;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -19,7 +20,7 @@ public interface GroupDao {
     Group queryGroupWithManNameById(@Param(value = "groupId")long groupId);
 
     int createGroup(@Param(value = "groupName") String groupName,
-                    @Param(value = "managerId") long manageId);
+                    @Param(value = "managerId") long manageId)throws DataAccessException;
 
     int updateGroupPic(@Param(value = "groupId")long groupId,
                     @Param(value = "picId")int picId);

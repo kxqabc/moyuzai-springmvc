@@ -2,17 +2,17 @@ package com.moyuzai.servlet.service;
 
 import com.moyuzai.servlet.dao.UserDao;
 import com.moyuzai.servlet.dto.ServiceData;
-import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.User;
-import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.http.HttpURLConnPost;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpSession;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 
@@ -55,8 +55,13 @@ public class UserServiceImpl implements UserService{
         User user = userDao.queryPasswardByMobile(mobile);
         if (DataFormatTransformUtil.isNullOrEmpty(user))
             return new ServiceData(false,null);
-        else
-            return new ServiceData(true,user);
+        else{
+            if (password.equals(user.getPassword())){
+                String result = user.getUserName()+"("+user.getId()+")";
+                return new ServiceData(true,result);
+            }else
+                return new ServiceData(false,-1,null);
+        }
     }
 
     @Override
@@ -112,14 +117,20 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    public ServiceData justifyPassword(String mobile, String newPassword) {
+    public ServiceData justifyPassword(String mobile, String newPassword) throws DataAccessException{
         User user = userDao.queryByMobile(mobile);
         //没有找到用户
         if (DataFormatTransformUtil.isNullOrEmpty(user)){
             return new ServiceData(false,null);
         }
         //修改密码
-        int result = userDao.updateByMobile(mobile,newPassword);//result代表的是被影响的记录的个数
+        int result;
+        try {
+            result = userDao.updateByMobile(mobile,newPassword);//result代表的是被影响的记录的个数
+        }catch (DataAccessException de){
+            logger.error("更改密码时数据库发生异常："+de);
+            throw de;
+        }
         if (result>0){
             return new ServiceData(true,null);
         }else {
@@ -128,8 +139,14 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    public ServiceData userRegister(String userName, String mobile, String password) {
-         int result = userDao.insertUser(userName,mobile,password);
+    public ServiceData userRegister(String userName, String mobile, String password) throws DataAccessException {
+        int result;
+        try {
+            result = userDao.insertUser(userName,mobile,password);
+        }catch (DataAccessException de){
+            logger.info("用户注册插入数据库时发生异常："+de.getMessage());
+            throw de;
+        }
          if (result <= 0)  //插入失败
              return new ServiceData(false,null);
          else {  //插入成功

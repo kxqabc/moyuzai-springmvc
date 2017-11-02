@@ -11,6 +11,7 @@ import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,20 +61,17 @@ public class ServiceProxyImpl implements ServiceProxy{
     }
 
     @Override
-    public UsersResponse userLogin(String mobile, String password) throws DataClassErrorException {
+    public UsersResponse userLogin(String mobile, String password) {
         ServiceData serviceData = userService.userLogin(mobile,password);
-        if (serviceData.isState()){
-            if (serviceData.getData() instanceof User){
-                User user = (User) serviceData.getData();
-                if (password.equals(user.getPassword()))
-                    return new UsersResponse(MyEnum.LOGIN_SUCCESS,
-                            user.getUserName()+"("+user.getId()+")");
-                else
-                    return new UsersResponse(MyEnum.PASSWORD_ERROR);
-            }else
-                throw new DataClassErrorException("查询数据库数据不符合期望类型！");
-        }else
-            return new UsersResponse(MyEnum.NEVER_REGISTER);
+        if (serviceData.isState()){ //手机号、密码核对成功
+            return new UsersResponse(MyEnum.LOGIN_SUCCESS,serviceData.getData());
+        }else{
+            if (serviceData.getStateNum() == 0) //没有找到用户
+                return new UsersResponse(MyEnum.NEVER_REGISTER);
+            else    //密码错误
+                return new UsersResponse(MyEnum.PASSWORD_ERROR);
+        }
+
     }
 
     @Override
@@ -115,7 +113,7 @@ public class ServiceProxyImpl implements ServiceProxy{
     }
 
     @Override
-    public UsersResponse justifyPassword(String mobile, String newPassword) {
+    public UsersResponse justifyPassword(String mobile, String newPassword) throws DataAccessException{
         ServiceData serviceData = userService.justifyPassword(mobile,newPassword);
         if (serviceData.isState())
             return new UsersResponse(MyEnum.MODIFY_PASSWORD_SUCCESS);
@@ -126,15 +124,17 @@ public class ServiceProxyImpl implements ServiceProxy{
     }
 
     @Override
-    public UsersResponse userRegister(String userName, String mobile, String password) throws DataClassErrorException {
+    public UsersResponse userRegister(String userName, String mobile, String password) throws DataClassErrorException, DataAccessException {
         ServiceData serviceData = userService.userRegister(userName,mobile,password);
         if (serviceData.isState()){
             if (serviceData.getData() instanceof User){
                 User user = (User) serviceData.getData();
                 return new UsersResponse(MyEnum.ADD_USER_SUCCESS,
                         user.getUserName() + "(" + user.getId() + ")");
-            }else
+            }else{
+                logger.error("从serviceData中转换User类型数据出错！");
                 throw new DataClassErrorException("查询数据库数据不符合期望类型！");
+            }
         }else
             return new UsersResponse(MyEnum.ADD_USER_ERROR);
     }
@@ -347,39 +347,27 @@ public class ServiceProxyImpl implements ServiceProxy{
         boolean isManagerExist = userService.isUserExist(managerId);
         if (!isManagerExist)
             return new UsersResponse(MyEnum.MANAGER_ERROR);
-        ServiceData serviceData = null;
-        try{
-            //创建群组
-            serviceData = groupService.createGroup(groupName,managerId);
-            if (serviceData.isState()){ //如果创建群组成功
-                if (serviceData.getData() instanceof Group){
-                    Group group = (Group) serviceData.getData();
-                    //将管理员添加到关系表中
-                    ServiceData addUserResult = userGroupService.addUserToGroup(managerId,group.getId());
-                    //如果添加成功
-                    if (addUserResult.isState())
-                        return new UsersResponse(MyEnum.CREATE_GROUP_SUCCESS,
-                                group.getGroupName()+"("+group.getId()+")");
-                    else
-                        throw new AddUserToGroupErrorException("创建群组时添加管理员信息出错！");
-                }else
-                    throw new DataClassErrorException("查询数据库数据不符合期望类型！");
-            }else {  //创建失败，原因：群组已经存在
-                return new UsersResponse(MyEnum.GROUP_EXIST);
-            }
-        }catch (CreateGroupErrorException e1){
-            logger.error(e1.getMessage());
-            throw e1;
-        }catch (AddUserToGroupErrorException e2){
-            logger.error(e2.getMessage());
-            throw e2;
-        }catch (DataClassErrorException e3){
-            e3.printStackTrace();
-            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
-        }catch (Exception e){
-            logger.error(e.getMessage());
-            throw new MoyuzaiInnerErrorException("创建群组时，墨鱼仔发生内部错误！");
-        }
+        ServiceData serviceData;
+        //创建群组
+        serviceData = groupService.createGroup(groupName,managerId);
+        if (serviceData.isState()){ //如果创建群组成功
+            if (serviceData.getData() instanceof Group){
+                Group group = (Group) serviceData.getData();
+                //将管理员添加到关系表中
+                ServiceData addUserResult = userGroupService.addUserToGroup(managerId,group.getId());
+                //如果添加成功
+                if (addUserResult.isState())
+                    return new UsersResponse(MyEnum.CREATE_GROUP_SUCCESS,
+                            group.getGroupName()+"("+group.getId()+")");
+                else
+                    throw new AddUserToGroupErrorException("创建群组时添加管理员信息出错！");
+            }else
+                throw new DataClassErrorException("查询数据库数据不符合期望类型！");
+        }else if (serviceData.getStateNum() == 0) //创建失败，原因：群组已经存在
+            return new UsersResponse(MyEnum.GROUP_EXIST);
+        else
+            return new UsersResponse(MyEnum.CREATE_GROUP_FAIL);
+
     }
 
     @Transactional

@@ -8,21 +8,21 @@ import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.exception.*;
 import com.moyuzai.servlet.mina.core.ServerHandler;
-import com.moyuzai.servlet.mina.model.JoinGroupNotifyModel;
-import com.moyuzai.servlet.mina.model.NotifyUser;
-import com.moyuzai.servlet.mina.model.PulledIntoGroupNotifyModel;
+import com.moyuzai.servlet.mina.model.*;
 import com.moyuzai.servlet.service.*;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import com.sun.org.apache.regexp.internal.RE;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -145,7 +145,7 @@ public class MyController {
     }
 
     /**
-     * 删除用户()
+     * 删除用户(数据库控制界面接口)
      * @param userId
      * @return
      */
@@ -177,7 +177,7 @@ public class MyController {
                                            HttpSession httpSession){
         logger.info("按手机号码查询用户。。");
         logger.info("mobile:"+mobile);
-        UsersResponse usersResponse = null;
+        UsersResponse usersResponse;
         try {
             usersResponse = serviceProxy.getUserByMobile(mobile);
         } catch (DataClassErrorException e) {
@@ -231,15 +231,17 @@ public class MyController {
         logger.info("password:"+password);
         //从httpSession中获取用户之前填写的手机号
         String mobile = (String) httpSession.getAttribute("mobile");
-        logger.info("mobile in httpSession:"+mobile);
-        if (DataFormatTransformUtil.isNullOrEmpty(mobile))
-            return new UsersResponse(MyEnum.NO_MOBILE_FOUND); //获取不到手机号
+        if (DataFormatTransformUtil.isNullOrEmpty(mobile))  //获取不到手机号
+            return new UsersResponse(MyEnum.NO_MOBILE_FOUND);
         else{
             try {
                 return serviceProxy.userRegister(userName,mobile,password);
             } catch (DataClassErrorException e) {
-                e.printStackTrace();
+                logger.error("注册用户时发生异常："+e);
                 return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
+            } catch (DataAccessException de){
+                logger.error("注册用户时发生异常："+de);
+                return new UsersResponse(MyEnum.SQLEXCEPTION);
             }
         }
     }
@@ -255,13 +257,8 @@ public class MyController {
     public UsersResponse login(@RequestParam("mobile")String mobile,
                                @RequestParam("password")String password){
         logger.info("用户登录。。");
-        UsersResponse usersResponse = null;
-        try {
-            usersResponse =  serviceProxy.userLogin(mobile,password);
-        } catch (DataClassErrorException e) {
-            e.printStackTrace();
-            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
-        }
+        UsersResponse usersResponse;
+        usersResponse =  serviceProxy.userLogin(mobile,password);
         return usersResponse;
     }
 
@@ -275,10 +272,16 @@ public class MyController {
         logger.info("修改密码。。");
         logger.info("password:"+password);
         String mobile = (String) httpSession.getAttribute("mobile");
-        logger.info("mobile in httpSession:"+mobile);
+        UsersResponse usersResponse;
         if (DataFormatTransformUtil.isNullOrEmpty(mobile))
             return paramNotFound();
-        return serviceProxy.justifyPassword(mobile,password);
+        try {
+            usersResponse = serviceProxy.justifyPassword(mobile,password);
+        }catch (DataAccessException de){
+            logger.info("更改密码时发生SQL异常："+de);
+            return new UsersResponse(MyEnum.SQLEXCEPTION);
+        }
+        return usersResponse;
     }
 
     /**
@@ -313,12 +316,14 @@ public class MyController {
         try{
             usersResponse = serviceProxy.createGroup(groupName,managerId);
         }catch (CreateGroupErrorException e1){
+            logger.error("创建群组时发生CreateGroupErrorException："+e1.getMessage());
             return new UsersResponse(MyEnum.CREATE_GROUP_FAIL);
         }catch (AddUserToGroupErrorException e2){
+            logger.error("创建群组时发生AddUserToGroupErrorException："+e2.getMessage());
             return new UsersResponse(MyEnum.CREATE_GROUP_FAIL);
-        }catch (Exception e){
-            logger.info(e.getMessage());
-            return new UsersResponse(MyEnum.INNER_REEOR);
+        }catch (DataClassErrorException e3){
+            logger.error("创建群组时发生DataClassErrorException："+e3.getMessage());
+            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
         }
         return usersResponse;
     }
@@ -343,7 +348,7 @@ public class MyController {
         logger.info("groupName:"+groupName);
         logger.info("managerId:"+managerId);
         /**从String中提取用户ID信息*/
-        Set<Long> userIdSet = null;
+        Set<Long> userIdSet;
         try {
             userIdSet = DataFormatTransformUtil.StringToLongSet(users);
         }catch (NumberFormatException e){
@@ -417,7 +422,7 @@ public class MyController {
     @ResponseBody
     @RequestMapping(value = "/joinGroup")
     public UsersResponse joinGroup(@RequestParam(value = "userId")long userId,
-                                   @RequestParam(value = "groupId")long groupId){
+                                   @RequestParam(value = "groupId")long groupId) throws IoSessionIllegalException {
         logger.info("申请加入群组。。");
         UsersResponse usersResponse = null;
         try{
@@ -435,12 +440,10 @@ public class MyController {
                 userIdSet.addAll(userIds);
                 Map<String,Object> paramterMap = new HashMap<>();
                 paramterMap.put("userId",userId);
-                paramterMap.put("userName",);
                 paramterMap.put("groupId",groupId);
-                paramterMap.put("usersAmount,");
-                
                 ServerHandler.Notify someoneJoinGroupNotify = serverHandler.new Notify(
                         new JoinGroupNotifyModel(null,null,serverHandler.getSessionMap(),userIdSet,paramterMap));
+                someoneJoinGroupNotify.notifyUser();
             }
         }
         return usersResponse;
@@ -480,7 +483,7 @@ public class MyController {
     @ResponseBody
     @RequestMapping(value = "/dismissGroup")
     public UsersResponse dismissGroup(@RequestParam(value = "managerId")long managerId,
-                                      @RequestParam(value = "groupId")long groupId){
+                                      @RequestParam(value = "groupId")long groupId) throws IoSessionIllegalException {
         logger.info("解散群组。。");
         UsersResponse getUsersResponse = serviceProxy.queryAllUserIdOfGroup(groupId);
         List<Long> userIds = null;
@@ -502,7 +505,13 @@ public class MyController {
             Set<Long> userIdSet = new HashSet<>();
             userIdSet.addAll(userIds);
             userIdSet.remove(managerId);    //除去管理者，不通知他
-            minaService.notifyUserGroupIsDisMissed(userIdSet,groupId);
+            if (DataFormatTransformUtil.isNullOrEmpty(userIds))
+                return deleteGroupResponse;
+            Map<String,Object> paramterMap = new HashMap<>();
+            paramterMap.put("groupId",groupId);
+            ServerHandler.Notify dismissGroupNotify = serverHandler.new Notify(
+                    new GroupDissmissNotifyModel(null,null,serverHandler.getSessionMap(),userIdSet,paramterMap));
+            dismissGroupNotify.notifyUser();
         }
         //解散群组之前应该先记录组员
         return deleteGroupResponse;
@@ -524,16 +533,41 @@ public class MyController {
                             managerId,picId,groupName,addUsers,minusUsers);
             //如果操作成功，通知群内其他所有人
             if (usersResponse.isState()){
+                //usersMap中保存了需要被通知的人群的信息
                 Map<String,Object> usersMap = (Map<String, Object>) usersResponse.getIdentity();
+                Map<String,Object> paramterMap;
+                GroupResponse groupResponse = serviceProxy.getGroupWithMoreDetail(groupId);
+                Group group = groupResponse.getGroup();
+                //在更改群组信息中不受影响的人群，即没有被拉入也没被踢出的人
                 if (usersMap.containsKey("unAffectedUsers")){
-                    GroupResponse groupResponse = serviceProxy.getGroupWithMoreDetail(groupId);
-                    Group group = groupResponse.getGroup();
-                    minaService.notifyUsersGroupMessageChange((Set<Long>) usersMap.get("unAffectedUsers"), group,addUsers);
+                    paramterMap = new HashMap<>();
+                    paramterMap.put("groupId",groupId);
+                    paramterMap.put("groupName",groupName);
+                    paramterMap.put("managerId",managerId);
+                    paramterMap.put("picId",picId);
+                    paramterMap.put("amount",group.getAmount());
+                    paramterMap.put("managerName",group.getManagerName());
+                    paramterMap.put("addUsers",addUsers);
+                    ServerHandler.Notify groupChangeNotify = serverHandler.new Notify(
+                            new GroupMessageChangeNotifyModel(null,null,serverHandler.getSessionMap(),(Set<Long>) usersMap.get("unAffectedUsers"),paramterMap));
+                    groupChangeNotify.notifyUser();
                 }
-                if (usersMap.containsKey("addUsers"))
-                    minaService.notifyUserIsPulledIntoGroup((Set<Long>) usersMap.get("addUsers"),groupId);
-                if (usersMap.containsKey("minusUsers"))
-                    minaService.notifyUsersIsKickout((Set<Long>) usersMap.get("minusUsers"),groupId);
+                //被新拉入群组的人
+                if (usersMap.containsKey("addUsers")){
+                    paramterMap = new HashMap<>();
+                    paramterMap.put("group",group);
+                    ServerHandler.Notify pulledIntoGroupNotify = serverHandler.new Notify(
+                            new PulledIntoGroupNotifyModel(null,null,serverHandler.getSessionMap(),(Set<Long>) usersMap.get("addUsers"),paramterMap));
+                    pulledIntoGroupNotify.notifyUser();
+                }
+                //被踢出群组的人
+                if (usersMap.containsKey("minusUsers")){
+                    paramterMap = new HashMap<>();
+                    paramterMap.put("groupId",groupId);
+                    ServerHandler.Notify kickoutFromGroupNotify = serverHandler.new Notify(
+                            new KickoutGroupNotifyModel(null,null,serverHandler.getSessionMap(),(Set<Long>) usersMap.get("minusUsers"),paramterMap));
+                    kickoutFromGroupNotify.notifyUser();
+                }
             }
             usersResponse.setIdentity(null);
             return usersResponse;

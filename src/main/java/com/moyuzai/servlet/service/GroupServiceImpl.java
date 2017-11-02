@@ -15,6 +15,7 @@ import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,7 +107,8 @@ public class GroupServiceImpl implements GroupService{
         int effectCount;
         try{
             effectCount = groupDao.createGroup(groupName,managerId);    //创建群组影响的行数
-        }catch (Exception e){
+        }catch (DataAccessException de){
+            logger.error("创建群组时发生数据库错误："+de);
             throw new CreateGroupErrorException("创建群组(不带初始化参数)时发生错误！");
         }
         if (effectCount>0){//影响行数大于0，则说明插入成功
@@ -115,7 +117,7 @@ public class GroupServiceImpl implements GroupService{
             return new ServiceData(true,group);
         }
         else
-            throw new CreateGroupErrorException("创建群组(不带初始化参数)时发生错误！");
+            return new ServiceData(false,-1,null);
     }
 
 

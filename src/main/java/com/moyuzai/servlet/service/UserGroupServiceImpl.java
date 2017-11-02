@@ -22,6 +22,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import proto.MessageProtoBuf;
@@ -222,8 +223,8 @@ public class UserGroupServiceImpl implements UserGroupService {
         int effectCount;
         try{
             effectCount = userGroupDao.saveUserGroup(groupId,userId);
-        }catch (SQLException e){
-            logger.error(e.getMessage());
+        }catch (DataAccessException de){
+            logger.error("将一个用户添加到群组时发生数据库异常："+de);
             throw new AddUserToGroupErrorException("向群组中添加用户时出错！");
         }
         if (effectCount>0)

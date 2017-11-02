@@ -1,6 +1,8 @@
 package com.moyuzai.servlet.exception;
 
-public class DeleteGroupException extends RuntimeException{
+import org.springframework.dao.DataAccessException;
+
+public class DeleteGroupException extends DataAccessException{
     public DeleteGroupException(String message) {
         super(message);
     }

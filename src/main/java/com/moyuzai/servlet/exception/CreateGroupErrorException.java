@@ -1,6 +1,8 @@
 package com.moyuzai.servlet.exception;
 
-public class CreateGroupErrorException extends RuntimeException {
+import org.springframework.dao.DataAccessException;
+
+public class CreateGroupErrorException extends DataAccessException {
 
     public CreateGroupErrorException(String message) {
         super(message);
