@@ -1,11 +1,16 @@
 package com.moyuzai.servlet.controller;
 
 import com.moyuzai.servlet.dto.GroupResponse;
+import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.exception.*;
+import com.moyuzai.servlet.mina.core.ServerHandler;
+import com.moyuzai.servlet.mina.model.JoinGroupNotifyModel;
+import com.moyuzai.servlet.mina.model.NotifyUser;
+import com.moyuzai.servlet.mina.model.PulledIntoGroupNotifyModel;
 import com.moyuzai.servlet.service.*;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import com.sun.org.apache.regexp.internal.RE;
@@ -18,10 +23,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by kong on 17-6-19.
@@ -33,15 +35,13 @@ public class MyController {
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
-//    private static final int LIMIT = 20;     //默认返回结果集个数
-
     private static final int STEP = 20;      //每页的结果条数
-
-    private static final int OFFSET = 0;     //结果集默认起始位置
-
 
     @Autowired
     private ServiceProxy serviceProxy;
+
+    @Autowired
+    private ServerHandler serverHandler;
 
     /**
      * 请求转发器，由于采用了标准的格式而没有使用restful风格url，试图通过请求参数“type”转发请求，
@@ -361,7 +361,20 @@ public class MyController {
                 if (userIdSet.contains(managerId))
                     userIdSet.remove(managerId);
                 //通知其他人
-                minaService.notifyUserIsPulledIntoGroup(userIdSet,usersResponse);
+                String groupInfo = (String)usersResponse.getIdentity();     //从dto中取出群组信息：ID和名称
+                long groupId = Long.parseLong(groupInfo.substring(groupInfo.indexOf("(") + 1, groupInfo.indexOf(")")));     //从群组信息中获取群组ID
+                if (DataFormatTransformUtil.isNullOrEmpty(groupId))
+                    return usersResponse;
+                Map<String,Object> paramterMap = new HashMap<>();
+                GroupResponse groupResponse= serviceProxy.getGroupWithMoreDetail(groupId);
+                if (groupResponse.isState()){
+                    Group group = groupResponse.getGroup();
+                    paramterMap.put("group",group);
+                    ServerHandler.Notify pulledIntoGroupNotify = serverHandler.new Notify(
+                            new PulledIntoGroupNotifyModel(null,null,serverHandler.getSessionMap(),userIdSet,paramterMap));
+                    pulledIntoGroupNotify.notifyUser();
+                }
+
             }
             return usersResponse;       //创建成功，返回成功信息的dto
         }catch (CreateGroupErrorException e1){      //创建不带初始化信息的群组失败
@@ -415,7 +428,20 @@ public class MyController {
 
         if (usersResponse.isState()){
             //通知其他人有人加入该群组
-            minaService.notifySomeJoined(groupId,userId);
+            UsersResponse userIdSetResult = serviceProxy.queryAllUserIdOfGroup(groupId);
+            if (userIdSetResult.isState()){
+                List<Long> userIds = (List<Long>) userIdSetResult.getIdentity();
+                Set<Long> userIdSet = new HashSet<>();
+                userIdSet.addAll(userIds);
+                Map<String,Object> paramterMap = new HashMap<>();
+                paramterMap.put("userId",userId);
+                paramterMap.put("userName",);
+                paramterMap.put("groupId",groupId);
+                paramterMap.put("usersAmount,");
+                
+                ServerHandler.Notify someoneJoinGroupNotify = serverHandler.new Notify(
+                        new JoinGroupNotifyModel(null,null,serverHandler.getSessionMap(),userIdSet,paramterMap));
+            }
         }
         return usersResponse;
     }

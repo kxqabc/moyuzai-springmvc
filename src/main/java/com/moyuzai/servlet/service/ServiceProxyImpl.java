@@ -28,8 +28,6 @@ public class ServiceProxyImpl implements ServiceProxy{
     private GroupService groupService;
     @Autowired
     private UserGroupService userGroupService;
-    @Autowired
-    private MinaService minaService;
 
     @Override
     public UsersResponse getUserById(long id) throws DataClassErrorException {

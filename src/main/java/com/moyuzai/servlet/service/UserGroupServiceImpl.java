@@ -68,6 +68,15 @@ public class UserGroupServiceImpl implements UserGroupService {
             return new ServiceData(true,users);
     }
 
+    @Override
+    public ServiceData queryAnotherGroupOfUser(long exGroupId, long userId) {
+        UserGroup userGroup = userGroupDao.queryAnotherGroupOfUser(exGroupId,userId);
+        if (DataFormatTransformUtil.isNullOrEmpty(userGroup))
+            return new ServiceData(false,null);
+        else
+            return new ServiceData(true,userGroup);
+    }
+
     /**
      * 退出群组
      * @param userId

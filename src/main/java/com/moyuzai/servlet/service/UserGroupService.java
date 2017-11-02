@@ -19,6 +19,8 @@ public interface UserGroupService {
 
     ServiceData getUsersOfGroup(long groupId);
 
+    ServiceData queryAnotherGroupOfUser(long exGroupId, long userId);
+
     ServiceData signoutFromGroup(long userId, long groupId);
 
 
@@ -42,6 +44,5 @@ public interface UserGroupService {
     boolean isJoined(long groupId,long userId);
 
     boolean isJoined(long groupId,Set<Long> userSet);
-//    proto.MessageProtoBuf.ProtoMessage getOfflineText(long userId,long groupId);
 
 }

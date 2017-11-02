@@ -16,41 +16,35 @@ import proto.MessageProtoBuf;
 /**
  * 将用户存入session列表
  */
-public class LoginModel {
+public class LoginModel extends MinaModel{
 
 	private static final Logger logger = LoggerFactory.getLogger(LoginModel.class);
 
-	private Map<Long, IoSession> mSessionMap;;
-
-	private IoSession mSession;
-
-	private MessageProtoBuf.ProtoMessage mProtoMessage;
-
-	public LoginModel(Map<Long, IoSession> map, IoSession session, MessageProtoBuf.ProtoMessage protoMessage) {
-		mSessionMap = map;
-		mSession = session;
-		mProtoMessage = protoMessage;
+	public LoginModel(Map<Long, Long> map, IoSession session, MessageProtoBuf.ProtoMessage protoMessage) {
+		super(protoMessage,session,map);
 	}
 
-	public void handle(UserService userService, UserGroupService userGroupService) {
+	public void handle() {
 		logger.info("进入login.handle..");
 		//登录回执
 		MessageProtoBuf.ProtoMessage loginResponse;
-
-		String from = mProtoMessage.getFrom();
+		String from = message.getFrom();
 		long userId = Long.parseLong(from.substring(from.indexOf("(") + 1, from.indexOf(")")));
 		logger.info("from:"+from+",userId:"+userId);
 		if (!userService.isUserExist(userId)){		//用户信息不正确
 			//不正常的登录回执
 			loginResponse = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.LOGIN_RESPONSE, "error");
-			mSession.write(loginResponse);
+			session.write(loginResponse);
 			logger.info("mina登录失败！");
 		}else {					//用户信息正确，正常登录
-			mSessionMap.put(userId, mSession);
-			logger.info("在线用户数量="+mSessionMap.size());
+			//将userId-sessionId保存到映射表中
+			sessionMap.put(userId, session.getId());
+			//将userId添加到session的属性中
+			session.setAttribute("userId",userId);
+			logger.info("在线用户数量="+sessionMap.size());
 			//正常的登录回执
 			loginResponse = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.LOGIN_RESPONSE,"ok");
-			mSession.write(loginResponse);
+			session.write(loginResponse);
 			//查询离线信息
 			List<MessageProtoBuf.ProtoMessage> offlineTextList = userGroupService.getOfflineText(userId);
 			if (offlineTextList == null||offlineTextList.equals("")||offlineTextList.isEmpty()) {
@@ -61,12 +55,12 @@ public class LoginModel {
 					//通知用户一个群组也没有了
 					MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
 							MessageProtoBuf.ProtoMessage.Type.NO_GROUP_NOTIFY,"ok");
-					mSession.write(message);
+					session.write(message);
 				}
 			} else {
 				logger.info("存在未推送信息！offlineTextList.size="+offlineTextList.size());
 				for (MessageProtoBuf.ProtoMessage protoMessage: offlineTextList) {
-					mSession.write(protoMessage);
+					session.write(protoMessage);
 					logger.info("离线推送消息，发给用户:" + userId + ",内容为: ");
 					logger.info(protoMessage.toString());
 				}

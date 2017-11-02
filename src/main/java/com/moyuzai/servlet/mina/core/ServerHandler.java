@@ -5,8 +5,11 @@ import java.util.*;
 import com.googlecode.protobuf.format.JsonFormat;
 import com.moyuzai.servlet.dao.UserGroupDao;
 import com.moyuzai.servlet.entity.UserGroup;
+import com.moyuzai.servlet.exception.IoSessionIllegalException;
 import com.moyuzai.servlet.mina.model.ChatModel;
 import com.moyuzai.servlet.mina.model.LoginModel;
+import com.moyuzai.servlet.mina.model.NotifyModel;
+import com.moyuzai.servlet.mina.model.NotifyUser;
 import com.moyuzai.servlet.service.GroupService;
 import com.moyuzai.servlet.service.UserGroupService;
 import com.moyuzai.servlet.service.UserService;
@@ -35,7 +38,7 @@ public class ServerHandler extends IoHandlerAdapter {
 	@Autowired
 	private UserGroupDao userGroupDao;
 
-	private Map<Long,IoSession> sessionMap = new HashMap<>();
+	private Map<Long,Long> sessionMap = new HashMap<>();	//1:userId, 2:sessionId
 
 	public ServerHandler() {
 		log.info("ServerHandler启动..");
@@ -55,11 +58,11 @@ public class ServerHandler extends IoHandlerAdapter {
 		if(type == Type.CHAT){
 			//聊天
 			ChatModel chatModel = new ChatModel(sessionMap, session, protoMessage);
-			chatModel.handle(userGroupService);
+			chatModel.handle();
 		}else if(type == Type.LOGIN){
 			//登录
 			LoginModel loginModel = new LoginModel(sessionMap, session, protoMessage);
-			loginModel.handle(userService,userGroupService);
+			loginModel.handle();
 		}else if (type == Type.HEART_BEAT){
 			session.write(DataFormatTransformUtil.packingToProtoMessageOption(Type.HEART_BEAT_RESPONSE,"ok"));
 		}
@@ -73,9 +76,18 @@ public class ServerHandler extends IoHandlerAdapter {
 	@Override
 	public void sessionClosed(IoSession session) throws Exception {
 		System.out.println("sessionClosed:"+session.toString());
-		if(sessionMap.containsValue(session)){
-			Collection<IoSession> c = sessionMap.values();
-			c.remove(session);
+		long sessionId = session.getId();
+		long userId  = (long) session.getAttribute("userId");
+		//如果没有“userId”属性，无法根据map的key删除一个键值对，只能通过value“sessionId”去删除
+		if (DataFormatTransformUtil.isNullOrEmpty(userId)){
+			if(sessionMap.containsValue(sessionId)){
+				Collection<Long> c = sessionMap.values();
+				c.remove(sessionId);
+			}
+		}else {	//session中存在“userId”属性，通过key"userId"删除键值对
+			if (sessionMap.containsKey(userId)){
+				sessionMap.remove(userId);
+			}
 		}
 	}
 
@@ -86,6 +98,22 @@ public class ServerHandler extends IoHandlerAdapter {
 
 	@Override
 	public void sessionIdle(IoSession session, IdleStatus status) throws Exception {
+	}
+
+	/**
+	 * 内部类，负责通知用户
+	 */
+	public class Notify{
+
+		public NotifyUser notifyUser;
+
+		public Notify(NotifyUser notifyUser) {
+			this.notifyUser = notifyUser;
+		}
+
+		public void notifyUser() throws IoSessionIllegalException {
+			notifyUser.notifyUsers();
+		}
 	}
 
 	/**
@@ -123,7 +151,7 @@ public class ServerHandler extends IoHandlerAdapter {
 		for (long userId:userIdSet){
 			if (sessionMap.containsKey(userId)){	//表示在线
 				log.info("用户："+userId+"在线,立即推送。。");
-				((IoSession)sessionMap.get(userId)).write(protoMessage);	//依次发送通知
+				(sessionMap.get(userId)).write(protoMessage);	//依次发送通知
 			}else {		//不在线，则保存在离线信息中
 				log.info("用户："+userId+"离线，将推送信息保存在数据库中。。");
 				UserGroup insertedGroup = userGroupDao.queryAnotherGroupOfUser(groupId,userId);
@@ -152,8 +180,7 @@ public class ServerHandler extends IoHandlerAdapter {
 //		message.t
 	}
 
-
-	public Map<Long, IoSession> getSessionMap() {
+	public Map<Long, Long> getSessionMap() {
 		return sessionMap;
 	}
 
