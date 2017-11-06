@@ -81,7 +81,7 @@ public class GroupServiceImpl implements GroupService{
     }
 
     @Override
-    public ServiceData changeGroupName(long groupId, long managerId, String groupName,boolean checked) {
+    public ServiceData changeGroupName(long groupId, long managerId, String groupName,boolean checked) throws ChangeGroupNameException{
         if (!checked){
             //是否该组的管理员
             boolean isManagerOfThisGroup = isManagerOfThisGroup(groupId,managerId);
@@ -90,9 +90,9 @@ public class GroupServiceImpl implements GroupService{
         }
         try{
             groupDao.updateGroupName(groupId,groupName);
-        }catch (Exception e){
-            e.printStackTrace();
-            return new ServiceData(false,null);
+        }catch (DataAccessException de){
+            de.printStackTrace();
+            throw new ChangeGroupNameException("修改群组名称时数据库发生异常！");
         }
         return new ServiceData(true,null);
     }
@@ -162,7 +162,7 @@ public class GroupServiceImpl implements GroupService{
      * @return
      */
     @Override
-    public ServiceData deleteGroup(long managerId, long groupId) {
+    public ServiceData deleteGroup(long managerId, long groupId) throws DeleteGroupException{
         //确定管理员ID是否正确
         boolean isManagerOfGroup = isManagerOfThisGroup(groupId,managerId);
         if (!isManagerOfGroup)
@@ -171,12 +171,9 @@ public class GroupServiceImpl implements GroupService{
         int effectCount;
         try{
             effectCount = groupDao.deleteGroup(managerId,groupId);
-        }catch (SQLException e1){
-            e1.printStackTrace();
+        }catch (DataAccessException de){
+            logger.error("删除群组时数据库："+de);
             throw new DeleteGroupException("删除群组时发生SQLException！");
-        }catch (Exception e){
-            e.printStackTrace();
-            throw e;
         }
 
         if (effectCount>0)

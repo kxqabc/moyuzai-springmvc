@@ -1,5 +1,6 @@
 package com.moyuzai.servlet.mina.model;
 
+import com.moyuzai.servlet.service.UserGroupService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
 import proto.MessageProtoBuf;
@@ -10,8 +11,8 @@ import java.util.Set;
 public class KickoutGroupNotifyModel extends GroupDissmissNotifyModel {
 
     public KickoutGroupNotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
-                                   Set<Long> userIds, Map<String, Object> paramter) {
-        super(message, session, sessionMap, userIds, paramter);
+                                   UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap) {
+        super(message, session, sessionMap, userGroupService, userIdSet, paramterMap);
     }
 
     @Override

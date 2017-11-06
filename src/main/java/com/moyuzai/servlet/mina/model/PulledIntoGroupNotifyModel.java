@@ -3,10 +3,16 @@ package com.moyuzai.servlet.mina.model;
 import com.google.gson.Gson;
 import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.exception.IoSessionIllegalException;
+import com.moyuzai.servlet.service.GroupService;
+import com.moyuzai.servlet.service.UserGroupService;
+import com.moyuzai.servlet.service.UserService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import proto.MessageProtoBuf;
 
 import java.util.Map;
@@ -22,8 +28,8 @@ public class PulledIntoGroupNotifyModel extends NotifyModel implements NotifyUse
     private long groupId;
 
     public PulledIntoGroupNotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
-                                      Set<Long> userIds,Map<String,Object> paramter) {
-        super(message, session, sessionMap,userIds,paramter);
+                                      UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap) {
+        super(message, session, sessionMap, userGroupService, userIdSet, paramterMap);
     }
 
     @Override
@@ -49,7 +55,8 @@ public class PulledIntoGroupNotifyModel extends NotifyModel implements NotifyUse
             boolean isPackingSuccess = packingProtoMessage();
             if (!isPackingSuccess)
                 return;
-            notifyAllUsers(userIdSet,groupId,message);
+            logger.info("userGroupService is null:"+DataFormatTransformUtil.isNullOrEmpty(userGroupService));
+            notifyAllUsers(userIdSet,groupId,message,userGroupService);
         }
     }
 

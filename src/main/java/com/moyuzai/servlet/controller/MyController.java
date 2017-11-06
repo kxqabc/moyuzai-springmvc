@@ -40,9 +40,6 @@ public class MyController {
     @Autowired
     private ServiceProxy serviceProxy;
 
-    @Autowired
-    private ServerHandler serverHandler;
-
     /**
      * 请求转发器，由于采用了标准的格式而没有使用restful风格url，试图通过请求参数“type”转发请求，
      * 同时也将各个模块的接口隐藏起来，不完全暴露给用户，用户只知道“固定网址”+“参数”，服务器通过
@@ -358,28 +355,25 @@ public class MyController {
         if (DataFormatTransformUtil.isNullOrEmpty(userIdSet))      //users为空
             return paramNotFound();
         /**进行“事务”操作，若出现runtimeException则rollback，否则commit*/
+        //别忘记加入管理员
+        if (!userIdSet.contains(managerId))
+            userIdSet.add(managerId);
         try {
             UsersResponse usersResponse = serviceProxy.createGroupWithInit(userIdSet,managerId,groupName,picId);
-            /**全部操作成功后，则通知所有组员已经被拉入该群组*/
+            //全部操作成功后，则通知所有组员已经被拉入该群组
+            /**考虑是否开新线程？？？？？*/
             if (usersResponse.isState()){
-                //除去管理员，不用通知他
-                if (userIdSet.contains(managerId))
-                    userIdSet.remove(managerId);
-                //通知其他人
+                //准备通知前的参数
                 String groupInfo = (String)usersResponse.getIdentity();     //从dto中取出群组信息：ID和名称
                 long groupId = Long.parseLong(groupInfo.substring(groupInfo.indexOf("(") + 1, groupInfo.indexOf(")")));     //从群组信息中获取群组ID
-                if (DataFormatTransformUtil.isNullOrEmpty(groupId))
+                if (DataFormatTransformUtil.isNullOrEmpty(groupId)){
+                    logger.warn("创建群组（含初始化参数）获取通知群组ID时出错！");
                     return usersResponse;
-                Map<String,Object> paramterMap = new HashMap<>();
-                GroupResponse groupResponse= serviceProxy.getGroupWithMoreDetail(groupId);
-                if (groupResponse.isState()){
-                    Group group = groupResponse.getGroup();
-                    paramterMap.put("group",group);
-                    ServerHandler.Notify pulledIntoGroupNotify = serverHandler.new Notify(
-                            new PulledIntoGroupNotifyModel(null,null,serverHandler.getSessionMap(),userIdSet,paramterMap));
-                    pulledIntoGroupNotify.notifyUser();
                 }
-
+                //调用mina进行通知,并且去除管理者，不需要通知管理者
+                if (userIdSet.contains(managerId))
+                    userIdSet.remove(managerId);
+                serviceProxy.notifyUserIsPulledIntoGroup(userIdSet,groupId);
             }
             return usersResponse;       //创建成功，返回成功信息的dto
         }catch (CreateGroupErrorException e1){      //创建不带初始化信息的群组失败
@@ -388,9 +382,15 @@ public class MyController {
             return new UsersResponse(MyEnum.ADD_GROUP_PIC_FAIL);
         }catch (AddUserToGroupErrorException e3){   //将用户添加入群组时出现错误
             return new UsersResponse(MyEnum.REMAIN_USERS);
-        }catch (Exception e){                       //内部错误
-            logger.info(e.getMessage());
-            return new UsersResponse(MyEnum.INNER_REEOR);
+        } catch (TargetLostException e) {
+            e.printStackTrace();
+            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
+        } catch (DataClassErrorException e) {
+            e.printStackTrace();
+            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
+        } catch (IoSessionIllegalException e) {
+            e.printStackTrace();
+            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
         }
     }
 
@@ -424,26 +424,18 @@ public class MyController {
     public UsersResponse joinGroup(@RequestParam(value = "userId")long userId,
                                    @RequestParam(value = "groupId")long groupId) throws IoSessionIllegalException {
         logger.info("申请加入群组。。");
-        UsersResponse usersResponse = null;
+        UsersResponse usersResponse;
         try{
             usersResponse = serviceProxy.joinGroup(userId,groupId);
         }catch (AddUserToGroupErrorException e1){
+            logger.error("申请加入群组时出现异常："+e1.getMessage());
             return new UsersResponse(MyEnum.JOIN_GROUP_FAIL);
         }
-
         if (usersResponse.isState()){
             //通知其他人有人加入该群组
             UsersResponse userIdSetResult = serviceProxy.queryAllUserIdOfGroup(groupId);
             if (userIdSetResult.isState()){
-                List<Long> userIds = (List<Long>) userIdSetResult.getIdentity();
-                Set<Long> userIdSet = new HashSet<>();
-                userIdSet.addAll(userIds);
-                Map<String,Object> paramterMap = new HashMap<>();
-                paramterMap.put("userId",userId);
-                paramterMap.put("groupId",groupId);
-                ServerHandler.Notify someoneJoinGroupNotify = serverHandler.new Notify(
-                        new JoinGroupNotifyModel(null,null,serverHandler.getSessionMap(),userIdSet,paramterMap));
-                someoneJoinGroupNotify.notifyUser();
+                serviceProxy.notifySomeJoined(userId,groupId);
             }
         }
         return usersResponse;
@@ -460,14 +452,11 @@ public class MyController {
     public UsersResponse signoutFromGroup(@RequestParam(value = "userId")long userId,
                                           @RequestParam(value = "groupId")long groupId){
         logger.info("退出群组。。");
-        UsersResponse usersResponse = null;
+        UsersResponse usersResponse;
         try{
             usersResponse = serviceProxy.signoutFromGroup(userId,groupId);
         }catch (DeleteUserException e1){
-            MyEnum.SIGNOUT_GROUP_FAIL.setStateInfo("退出群"+groupId+"失败！");
-            return new UsersResponse(MyEnum.SIGNOUT_GROUP_FAIL);
-        }catch (Exception e){
-            logger.error(e.getMessage());
+            logger.error("退出群组："+groupId+"时出现异常DeleteUserException："+e1.getMessage());
             MyEnum.SIGNOUT_GROUP_FAIL.setStateInfo("退出群"+groupId+"失败！");
             return new UsersResponse(MyEnum.SIGNOUT_GROUP_FAIL);
         }
@@ -485,18 +474,16 @@ public class MyController {
     public UsersResponse dismissGroup(@RequestParam(value = "managerId")long managerId,
                                       @RequestParam(value = "groupId")long groupId) throws IoSessionIllegalException {
         logger.info("解散群组。。");
+        //解散群组前首先获取所有组员
         UsersResponse getUsersResponse = serviceProxy.queryAllUserIdOfGroup(groupId);
         List<Long> userIds = null;
         if (!DataFormatTransformUtil.isNullOrEmpty(getUsersResponse.getIdentity()))
             userIds = (List<Long>) getUsersResponse.getIdentity();
-        UsersResponse deleteGroupResponse = null;
+        UsersResponse deleteGroupResponse;
         try {
             deleteGroupResponse = serviceProxy.deleteGroup(managerId,groupId);
         }catch (DeleteGroupException e1){
-            logger.error(e1.getMessage());
-            deleteGroupResponse = new UsersResponse(MyEnum.DISMISS_GROUP_FAIL);
-        }catch (Exception e){
-            logger.error(e.getMessage());
+            logger.error("解散群组时发生异常："+e1.getMessage());
             deleteGroupResponse = new UsersResponse(MyEnum.DISMISS_GROUP_FAIL);
         }
 
@@ -507,11 +494,7 @@ public class MyController {
             userIdSet.remove(managerId);    //除去管理者，不通知他
             if (DataFormatTransformUtil.isNullOrEmpty(userIds))
                 return deleteGroupResponse;
-            Map<String,Object> paramterMap = new HashMap<>();
-            paramterMap.put("groupId",groupId);
-            ServerHandler.Notify dismissGroupNotify = serverHandler.new Notify(
-                    new GroupDissmissNotifyModel(null,null,serverHandler.getSessionMap(),userIdSet,paramterMap));
-            dismissGroupNotify.notifyUser();
+            serviceProxy.notifyUserGroupIsDisMissed(userIdSet,groupId);
         }
         //解散群组之前应该先记录组员
         return deleteGroupResponse;
@@ -535,56 +518,46 @@ public class MyController {
             if (usersResponse.isState()){
                 //usersMap中保存了需要被通知的人群的信息
                 Map<String,Object> usersMap = (Map<String, Object>) usersResponse.getIdentity();
-                Map<String,Object> paramterMap;
                 GroupResponse groupResponse = serviceProxy.getGroupWithMoreDetail(groupId);
                 Group group = groupResponse.getGroup();
                 //在更改群组信息中不受影响的人群，即没有被拉入也没被踢出的人
                 if (usersMap.containsKey("unAffectedUsers")){
-                    paramterMap = new HashMap<>();
-                    paramterMap.put("groupId",groupId);
-                    paramterMap.put("groupName",groupName);
-                    paramterMap.put("managerId",managerId);
-                    paramterMap.put("picId",picId);
-                    paramterMap.put("amount",group.getAmount());
-                    paramterMap.put("managerName",group.getManagerName());
-                    paramterMap.put("addUsers",addUsers);
-                    ServerHandler.Notify groupChangeNotify = serverHandler.new Notify(
-                            new GroupMessageChangeNotifyModel(null,null,serverHandler.getSessionMap(),(Set<Long>) usersMap.get("unAffectedUsers"),paramterMap));
-                    groupChangeNotify.notifyUser();
+                    serviceProxy.notifyUsersGroupMessageChange((Set<Long>) usersMap.get("unAffectedUsers"),group,addUsers);
                 }
                 //被新拉入群组的人
                 if (usersMap.containsKey("addUsers")){
-                    paramterMap = new HashMap<>();
-                    paramterMap.put("group",group);
-                    ServerHandler.Notify pulledIntoGroupNotify = serverHandler.new Notify(
-                            new PulledIntoGroupNotifyModel(null,null,serverHandler.getSessionMap(),(Set<Long>) usersMap.get("addUsers"),paramterMap));
-                    pulledIntoGroupNotify.notifyUser();
+                    serviceProxy.notifyUserIsPulledIntoGroup((Set<Long>) usersMap.get("addUsers"),groupId);
                 }
                 //被踢出群组的人
                 if (usersMap.containsKey("minusUsers")){
-                    paramterMap = new HashMap<>();
-                    paramterMap.put("groupId",groupId);
-                    ServerHandler.Notify kickoutFromGroupNotify = serverHandler.new Notify(
-                            new KickoutGroupNotifyModel(null,null,serverHandler.getSessionMap(),(Set<Long>) usersMap.get("minusUsers"),paramterMap));
-                    kickoutFromGroupNotify.notifyUser();
+                    serviceProxy.notifyUsersIsKickout((Set<Long>) usersMap.get("minusUsers"),groupId);
                 }
             }
             usersResponse.setIdentity(null);
             return usersResponse;
         }catch (AddPicIdErrorException e1){
+            logger.error("更改群组头像时出现异常："+e1);
             return new UsersResponse(MyEnum.ADD_GROUP_PIC_FAIL);
         }catch (ChangeGroupNameException e2){
+            logger.error("修改就群组名称时出现异常："+e2);
             return new UsersResponse(MyEnum.CHANG_GROUP_NAME_FAIL);
         }catch (AddUserToGroupErrorException e3){
+            logger.error("将用户添加到群组时出现异常："+e3);
             return new UsersResponse(MyEnum.REMAIN_USERS);
         }catch (DeleteUserException e4){
+            logger.error("将用户踢出群组时出现异常："+e4);
             return new UsersResponse(MyEnum.DELETE_USER_FAIL);
         }catch (NumberFormatException e5){
+            logger.error("数字转换时出现异常："+e5);
             return new UsersResponse(MyEnum.STRING_FORMAT_REEOR);
         }catch (TargetLostException e6){
+            logger.error("修改群组资料时目标丢失异常："+e6);
             return new UsersResponse(MyEnum.TARGET_LOST);
-        }catch (Exception e){
-            logger.error(e.getMessage());
+        } catch (DataClassErrorException e7) {
+            logger.error("修改群组资料时出现异常DataClassErrorException："+e7);
+            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
+        } catch (IoSessionIllegalException e8) {
+            logger.error("修改群组资料时出现异常IoSessionIllegalException："+e8);
             return new UsersResponse(MyEnum.INNER_REEOR);
         }
     }

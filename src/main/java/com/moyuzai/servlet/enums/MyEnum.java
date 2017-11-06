@@ -54,7 +54,8 @@ public enum MyEnum {
     STRING_FORMAT_REEOR(false,-29,"字符串转数组出现错误！请核对数据。"),
     DATABASE_CLASS_ERROR(false,-30,"查询数据库数据不符合期望类型！"),
     TARGET_LOST(false,-31,"查询目标已经不存在！"),
-    SQLEXCEPTION(false,-32,"数据库执行SQL语句时发生错误！");
+    SQLEXCEPTION(false,-32,"数据库执行SQL语句时发生错误！"),
+    MANAGER_CANT_SIGNOUT(false,-33,"您是该群组的管理员，不能退出群组！");
 
     private boolean state;
     private int stateNum;

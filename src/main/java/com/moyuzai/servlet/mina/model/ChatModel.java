@@ -5,10 +5,12 @@ import java.util.Map;
 
 import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.exception.IoSessionIllegalException;
+import com.moyuzai.servlet.service.UserGroupService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import proto.MessageProtoBuf;
 
 /**
@@ -16,6 +18,10 @@ import proto.MessageProtoBuf;
  */
 public class ChatModel extends MinaModel{
 	private Logger logger = LoggerFactory.getLogger(this.getClass());
+
+	@Autowired
+	private UserGroupService userGroupService;
+
 	private long fromId;
 	private long groupId;
 

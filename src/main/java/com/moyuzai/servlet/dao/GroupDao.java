@@ -17,6 +17,7 @@ public interface GroupDao {
     Group queryByGroupNameManagerId(@Param(value = "groupName") String groupName,
                                     @Param(value = "managerId") long manageId);
 
+    //g.id,g.groupName,g.managerId,g.picId,u.userName
     Group queryGroupWithManNameById(@Param(value = "groupId")long groupId);
 
     int createGroup(@Param(value = "groupName") String groupName,
@@ -26,10 +27,10 @@ public interface GroupDao {
                     @Param(value = "picId")int picId);
 
     int updateGroupName(@Param(value = "groupId")long groupId,
-                        @Param(value = "groupName")String groupName);
+                        @Param(value = "groupName")String groupName)throws DataAccessException;
 
     int deleteGroup(@Param(value = "managerId")long managerId,
-                    @Param(value = "groupId")long groupId)throws SQLException;
+                    @Param(value = "groupId")long groupId)throws DataAccessException;
 
     int deleteGroupById(@Param(value = "groupId")long groupId);
 

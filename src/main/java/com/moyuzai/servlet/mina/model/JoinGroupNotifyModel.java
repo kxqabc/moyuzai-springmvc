@@ -4,10 +4,14 @@ import com.google.gson.Gson;
 import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.exception.IoSessionIllegalException;
+import com.moyuzai.servlet.service.GroupService;
+import com.moyuzai.servlet.service.UserGroupService;
+import com.moyuzai.servlet.service.UserService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import proto.MessageProtoBuf;
 
 import java.util.HashMap;
@@ -18,11 +22,14 @@ public class JoinGroupNotifyModel extends NotifyModel implements NotifyUser{
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    private UserService userService;
+
     private long groupId;
 
     public JoinGroupNotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
-                                Set<Long> userIds, Map<String, Object> paramter) {
-        super(message, session, sessionMap, userIds, paramter);
+                                UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap, UserService userService) {
+        super(message, session, sessionMap, userGroupService, userIdSet, paramterMap);
+        this.userService = userService;
     }
 
     @Override
@@ -63,7 +70,7 @@ public class JoinGroupNotifyModel extends NotifyModel implements NotifyUser{
             boolean isPackingSuccess = packingProtoMessage();
             if (!isPackingSuccess)
                 return;
-            notifyAllUsers(userIdSet,groupId,message);
+            notifyAllUsers(userIdSet,groupId,message,userGroupService);
         }
     }
 

@@ -7,6 +7,8 @@ import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.entity.User;
 import com.moyuzai.servlet.enums.MyEnum;
 import com.moyuzai.servlet.exception.*;
+import com.moyuzai.servlet.mina.core.ServerHandler;
+import com.moyuzai.servlet.mina.model.*;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,8 @@ public class ServiceProxyImpl implements ServiceProxy{
     private GroupService groupService;
     @Autowired
     private UserGroupService userGroupService;
+    @Autowired
+    private ServerHandler serverHandler;
 
     @Override
     public UsersResponse getUserById(long id) throws DataClassErrorException {
@@ -202,15 +206,10 @@ public class ServiceProxyImpl implements ServiceProxy{
     }
 
     @Override
-    public UsersResponse deleteGroup(long managerId, long groupId) {
-        ServiceData serviceData = null;
-        try {
-            serviceData = groupService.deleteGroup(managerId,groupId);
-        }catch (DeleteGroupException e1){
-            throw e1;
-        }catch (Exception e){
-            throw e;
-        }
+    public UsersResponse deleteGroup(long managerId, long groupId) throws DeleteGroupException{
+        ServiceData serviceData;
+        serviceData = groupService.deleteGroup(managerId,groupId);
+
         if (serviceData.isState())
             return new UsersResponse(MyEnum.DISMISS_GROUP_SUCCESS);
         else if (serviceData.getStateNum() == 0)
@@ -226,7 +225,7 @@ public class ServiceProxyImpl implements ServiceProxy{
     }
 
     @Override
-    public UsersResponse changeGroupPic(long groupId, long managerId, int picId,boolean cheched) {
+    public UsersResponse changeGroupPic(long groupId, long managerId, int picId,boolean cheched) throws AddPicIdErrorException{
         ServiceData serviceData = groupService.changeGroupPic(groupId,managerId,picId,cheched);
         if (serviceData.isState())
             return new UsersResponse(MyEnum.CHANGE_GROUP_PIC_SUCCESS);
@@ -235,7 +234,7 @@ public class ServiceProxyImpl implements ServiceProxy{
     }
 
     @Override
-    public UsersResponse changeGroupName(long groupId, long managerId, String groupName,boolean cheched) {
+    public UsersResponse changeGroupName(long groupId, long managerId, String groupName,boolean cheched) throws ChangeGroupNameException{
         ServiceData serviceData = groupService.changeGroupName(groupId,managerId,groupName,cheched);
         if (serviceData.isState())
             return new UsersResponse(MyEnum.CHANGE_GROUP_NAME_SUCCESS);
@@ -243,9 +242,10 @@ public class ServiceProxyImpl implements ServiceProxy{
             return new UsersResponse(MyEnum.NOT_THE_MANAGER_OF_THIS_GROUP);
     }
 
+    @Transactional
     @Override
-    public UsersResponse updateGroupDate(long groupId, long managerId, Integer picId, String groupName,
-                                         String addUsers, String minusUsers) {
+    public UsersResponse updateGroupDate(long groupId, long managerId, Integer picId, String groupName, String addUsers, String minusUsers)
+            throws AddPicIdErrorException,ChangeGroupNameException,AddUserToGroupErrorException,DeleteUserException,NumberFormatException{
         //核对群组是否存在
         boolean isGroupExist = groupService.checkGroupIsExist(groupId);
         if (!isGroupExist)
@@ -260,72 +260,57 @@ public class ServiceProxyImpl implements ServiceProxy{
             return new UsersResponse(MyEnum.NOT_THE_MANAGER_OF_THIS_GROUP);
         //保存：添加、删除组员ID的集合
         Map<String,Object> usersMap = new HashMap<>();
-        try{
-            //检查picId参数是否为空，为空则表示没有修改
-            if (!DataFormatTransformUtil.isNullOrEmpty(picId))
-                groupService.changeGroupPic(groupId,managerId,picId,true);
-            //检查groupName参数是否为空
-            if (!DataFormatTransformUtil.isNullOrEmpty(groupName))
-                groupService.changeGroupName(groupId,managerId,groupName,true);
+        //检查picId参数是否为空，为空则表示没有修改
+        if (!DataFormatTransformUtil.isNullOrEmpty(picId))
+            groupService.changeGroupPic(groupId,managerId,picId,true);
+        //检查groupName参数是否为空
+        if (!DataFormatTransformUtil.isNullOrEmpty(groupName))
+            groupService.changeGroupName(groupId,managerId,groupName,true);
 
-            //踢出组员
-            if (!DataFormatTransformUtil.isNullOrEmpty(minusUsers)){
-                Set<Long> minusUsersIdSet = DataFormatTransformUtil.StringToLongSet(minusUsers);
-                //将users依次踢出group
-                if (!DataFormatTransformUtil.isNullOrEmpty(minusUsersIdSet)){
-                    userGroupService.deleteUsersOfGroup(minusUsersIdSet,groupId);
-                    //将踢出的用户id集合保存
-                    usersMap.put("minusUsers",minusUsersIdSet);
-                }
+        //踢出组员
+        if (!DataFormatTransformUtil.isNullOrEmpty(minusUsers)){
+            Set<Long> minusUsersIdSet = DataFormatTransformUtil.StringToLongSet(minusUsers);
+            //将users依次踢出group
+            if (!DataFormatTransformUtil.isNullOrEmpty(minusUsersIdSet)){
+                userGroupService.deleteUsersOfGroup(minusUsersIdSet,groupId);
+                //将踢出的用户id集合保存
+                usersMap.put("minusUsers",minusUsersIdSet);
             }
+        }
 
-            //如果只改变了“踢出成员”这一项的话，就没必要做下去了；
-            // 并且，不会再向map中put：unAffectedUsers、addUsers，刚好不用通知这两种人群
-            if (DataFormatTransformUtil.isNullOrEmpty(picId) &&
-                    DataFormatTransformUtil.isNullOrEmpty(groupName) &&
-                    DataFormatTransformUtil.isNullOrEmpty(addUsers)){
-                return new UsersResponse(MyEnum.CHANGE_GROUP_DATE_SUCCESS,usersMap);
-            }
+        //如果只改变了“踢出成员”这一项的话，就没必要做下去了；
+        // 并且，不会再向map中put：unAffectedUsers、addUsers，刚好不用通知这两种人群
+        if (DataFormatTransformUtil.isNullOrEmpty(picId) &&
+                DataFormatTransformUtil.isNullOrEmpty(groupName) &&
+                DataFormatTransformUtil.isNullOrEmpty(addUsers)){
+            return new UsersResponse(MyEnum.CHANGE_GROUP_DATE_SUCCESS,usersMap);
+        }
 
-            //获取要通知“群组资料变化”的组员ID
-            List<Long> unTouchedUserIds = null;
-            ServiceData serviceData = userGroupService.queryAllUserIdOfGroup(groupId);
-            if (serviceData.isState()){
-                unTouchedUserIds = (List<Long>) serviceData.getData();
-            }
-            //将用户ID保存在dto的identity中
-            if (!DataFormatTransformUtil.isNullOrEmpty(unTouchedUserIds)){
-                Set<Long> unTouchUserSet = new HashSet<>();
-                unTouchUserSet.addAll(unTouchedUserIds);
+        //获取要通知“群组资料变化”的组员ID
+        List<Long> unTouchedUserIds = null;
+        ServiceData serviceData = userGroupService.queryAllUserIdOfGroup(groupId);
+        if (serviceData.isState()){
+            unTouchedUserIds = (List<Long>) serviceData.getData();
+        }
+        //将用户ID保存在dto的identity中
+        if (!DataFormatTransformUtil.isNullOrEmpty(unTouchedUserIds)){
+            Set<Long> unTouchUserSet = new HashSet<>();
+            unTouchUserSet.addAll(unTouchedUserIds);
+            if (unTouchUserSet.contains(managerId))
                 unTouchUserSet.remove(managerId);
-                if (!DataFormatTransformUtil.isNullOrEmpty(unTouchUserSet)){
-                    usersMap.put("unAffectedUsers",unTouchUserSet);
-                    logger.info("unAffectedUsers:"+unTouchUserSet.size());
-                }
+            if (!DataFormatTransformUtil.isNullOrEmpty(unTouchUserSet)){
+                usersMap.put("unAffectedUsers",unTouchUserSet);
+                logger.info("unAffectedUsers:"+unTouchUserSet.size());
             }
-            if (!DataFormatTransformUtil.isNullOrEmpty(addUsers)){
-                logger.info("addUsers:"+addUsers);
-                Set<Long> addUsersIdSet = DataFormatTransformUtil.StringToLongSet(addUsers);
-                logger.info("addUsersIdSet.size:"+addUsersIdSet.size());
-                //将users依次加入group中
-                if (!DataFormatTransformUtil.isNullOrEmpty(addUsersIdSet)){
-                    userGroupService.addUsersToGroup(addUsersIdSet,groupId);
-                    usersMap.put("addUsers",addUsersIdSet);
-                }
+        }
+        if (!DataFormatTransformUtil.isNullOrEmpty(addUsers)){
+            logger.info("addUsers:"+addUsers);
+            Set<Long> addUsersIdSet = DataFormatTransformUtil.StringToLongSet(addUsers);
+            //将users依次加入group中
+            if (!DataFormatTransformUtil.isNullOrEmpty(addUsersIdSet)){
+                userGroupService.addUsersToGroup(addUsersIdSet,groupId);
+                usersMap.put("addUsers",addUsersIdSet);
             }
-        }catch (AddPicIdErrorException e1){
-            throw e1;
-        }catch (ChangeGroupNameException e2){
-            throw e2;
-        }catch (AddUserToGroupErrorException e3){
-            throw e3;
-        }catch (DeleteUserException e4){
-            throw e4;
-        }catch (NumberFormatException e5){
-            throw e5;
-        }catch (Exception e){
-            logger.error(e.getMessage());
-            throw new MoyuzaiInnerErrorException("墨鱼仔出现内部错误！");
         }
         return new UsersResponse(MyEnum.CHANGE_GROUP_DATE_SUCCESS,usersMap);
     }
@@ -367,13 +352,12 @@ public class ServiceProxyImpl implements ServiceProxy{
             return new UsersResponse(MyEnum.GROUP_EXIST);
         else
             return new UsersResponse(MyEnum.CREATE_GROUP_FAIL);
-
     }
 
     @Transactional
     @Override
     public UsersResponse createGroupWithInit(Set<Long> userIdSet, long managerId, String groupName, int picId) throws
-    CreateGroupErrorException,AddPicIdErrorException,AddUserToGroupErrorException{
+            CreateGroupErrorException, AddPicIdErrorException, AddUserToGroupErrorException, DataClassErrorException {
         //用户集合中有部分用户未注册
         boolean isAllUserExist = userService.isAllUserExist(userIdSet);
         if (!isAllUserExist)
@@ -382,34 +366,22 @@ public class ServiceProxyImpl implements ServiceProxy{
         boolean isManagerExist = userService.isUserExist(managerId);
         if (!isManagerExist)
             return new UsersResponse(MyEnum.MANAGER_ERROR);
-        try {
-            ServiceData createGroupResult = groupService.createGroup(groupName,managerId);
-            if (createGroupResult.isState()){
-                if (createGroupResult.getData() instanceof Group){
-                    Group group = (Group) createGroupResult.getData();
-                    long groupId = group.getId();
-                    //更改群组头像
-                    groupService.changeGroupPic(groupId,managerId,picId,true);
-                    //将用户添加到群组中
-                    userGroupService.addUsersToGroup(userIdSet,groupId);
-                    return new UsersResponse(MyEnum.CREATE_GROUP_SUCCESS,groupName+"("+groupId+")");
-                }else
-                    throw new DataClassErrorException("查询数据库数据不符合期望类型！");
-            }else {
-                throw new CreateGroupErrorException("创建群组（带初始化参数）出错！");
-            }
-        }catch (CreateGroupErrorException e1){
-            throw e1;
-        }catch (AddUserToGroupErrorException e2){
-            throw e2;
-        }catch (AddPicIdErrorException e3){
-            throw e3;
-        }catch (DataClassErrorException e4) {
-            e4.printStackTrace();
-            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
-        }catch (Exception e){
-            logger.error(e.getMessage());
-            throw new MoyuzaiInnerErrorException("创建群组时，墨鱼仔发生内部错误！");
+        //创建群组
+        ServiceData createGroupResult = groupService.createGroup(groupName,managerId);
+        if (createGroupResult.isState()){
+            if (createGroupResult.getData() instanceof Group){
+                Group group = (Group) createGroupResult.getData();
+                long groupId = group.getId();
+                //更改群组头像
+                groupService.changeGroupPic(groupId,managerId,picId,true);
+                //将用户添加到群组中
+                userGroupService.addUsersToGroup(userIdSet,groupId);
+                return new UsersResponse(MyEnum.CREATE_GROUP_SUCCESS,groupName+"("+groupId+")");
+            }else
+                throw new DataClassErrorException("查询数据库数据不符合期望类型！");
+        }else {
+            //这里需要抛出异常而不是返回usersresponse，因为使事务管理生效回滚
+            throw new CreateGroupErrorException("创建群组（含初始化参数）失败！");
         }
     }
 
@@ -442,12 +414,8 @@ public class ServiceProxyImpl implements ServiceProxy{
         if (isJoined)
             return new UsersResponse(MyEnum.IS_JOINED);
         /**执行加入动作*/
-        ServiceData addUserResult = null;
-        try {
-            addUserResult = userGroupService.addUserToGroup(userId,groupId);
-        }catch (AddUserToGroupErrorException e1){
-            throw e1;
-        }
+        ServiceData addUserResult;
+        addUserResult = userGroupService.addUserToGroup(userId,groupId);
         if (addUserResult.isState())
             return new UsersResponse(MyEnum.JOIN_GROUP_SUCCESS);
         else
@@ -455,22 +423,19 @@ public class ServiceProxyImpl implements ServiceProxy{
     }
 
     @Override
-    public UsersResponse signoutFromGroup(long userId, long groupId) {
-        try{
-            ServiceData serviceData = userGroupService.signoutFromGroup(userId,groupId);
-            if (serviceData.isState()){
-                MyEnum.SIGNOUT_SUCCESS.setStateInfo("退出群"+groupId+"成功！");
-                return new UsersResponse(MyEnum.SIGNOUT_SUCCESS);
-            }else if (serviceData.getStateNum()==0){
-                return new UsersResponse(MyEnum.NOT_IN_GROUP_ERROR);
-            }else {
-                MyEnum.SIGNOUT_GROUP_FAIL.setStateInfo("退出群"+groupId+"失败！");
-                return new UsersResponse(MyEnum.SIGNOUT_GROUP_FAIL);
-            }
-        }catch (DeleteUserException e1){
-            throw e1;
-        }catch (Exception e){
-            throw e;
+    public UsersResponse signoutFromGroup(long userId, long groupId) throws DeleteUserException{
+        //管理者不能主动退出群组，只能解散一个组，否则该组将缺少管理员
+        if (groupService.isManagerOfThisGroup(groupId,userId))
+            return new UsersResponse(MyEnum.MANAGER_CANT_SIGNOUT);
+        ServiceData serviceData = userGroupService.signoutFromGroup(userId,groupId);
+        if (serviceData.isState()){
+            MyEnum.SIGNOUT_SUCCESS.setStateInfo("退出群"+groupId+"成功！");
+            return new UsersResponse(MyEnum.SIGNOUT_SUCCESS);
+        }else if (serviceData.getStateNum()==0){
+            return new UsersResponse(MyEnum.NOT_IN_GROUP_ERROR);
+        }else {
+            MyEnum.SIGNOUT_GROUP_FAIL.setStateInfo("退出群"+groupId+"失败！");
+            return new UsersResponse(MyEnum.SIGNOUT_GROUP_FAIL);
         }
     }
 
@@ -487,6 +452,77 @@ public class ServiceProxyImpl implements ServiceProxy{
     public UsersResponse deleteUserOfGroup(long id) {
         UsersResponse usersResponse = userGroupService.deleteUsersOfGroup(id);
         return usersResponse;
+    }
+
+    @Override
+    public void notifyUserIsPulledIntoGroup(Set<Long> userIdSet, long groupId) throws IoSessionIllegalException, DataClassErrorException, TargetLostException {
+        Map<String,Object> paramterMap = new HashMap<>();
+        GroupResponse groupResponse= getGroupWithMoreDetail(groupId);
+        if (groupResponse.isState()){
+            Group group = groupResponse.getGroup();
+            paramterMap.put("group",group);
+            ServerHandler.Notify pulledIntoGroupNotify = serverHandler.new Notify(
+                    new PulledIntoGroupNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap));
+            pulledIntoGroupNotify.notifyUser();
+            logger.info("通知用户已经被拉入群组成功");
+        }else
+            logger.info("通知用户已经被拉入群组失败");
+
+    }
+
+    @Override
+    public void notifySomeJoined(long userId, long groupId) throws IoSessionIllegalException {
+        ServiceData serviceData = userGroupService.queryAllUserIdOfGroup(groupId);
+        if (serviceData.isState()){
+            List<Long> userIds = (List<Long>) serviceData.getData();
+            Set<Long> userIdSet = new HashSet<>();
+            userIdSet.addAll(userIds);
+            //不用通知申请加入的用户
+            if (userIdSet.contains(userId))
+                userIdSet.remove(userId);
+            Map<String,Object> paramterMap = new HashMap<>();
+            paramterMap.put("userId",userId);
+            paramterMap.put("groupId",groupId);
+            ServerHandler.Notify someoneJoinGroupNotify = serverHandler.new Notify(
+                    new JoinGroupNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap,userService));
+            someoneJoinGroupNotify.notifyUser();
+        }
+    }
+
+    @Override
+    public void notifyUserGroupIsDisMissed(Set<Long> userIdSet, long groupId) throws IoSessionIllegalException {
+        Map<String,Object> paramterMap = new HashMap<>();
+        paramterMap.put("groupId",groupId);
+        ServerHandler.Notify dismissGroupNotify = serverHandler.new Notify(
+                new GroupDissmissNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap));
+        dismissGroupNotify.notifyUser();
+    }
+
+    @Override
+    public void notifyUsersGroupMessageChange(Set<Long> userIdSet, Group group, String addUsers) throws IoSessionIllegalException {
+        if (DataFormatTransformUtil.isNullOrEmpty(group)) {
+            return;
+        }
+        Map<String,Object> paramterMap = new HashMap<>();
+        paramterMap.put("groupId",group.getId());
+        paramterMap.put("groupName",group.getGroupName());
+        paramterMap.put("managerId",group.getManagerId());
+        paramterMap.put("picId",group.getPicId());
+        paramterMap.put("amount",group.getAmount());
+        paramterMap.put("managerName",group.getManagerName());
+        paramterMap.put("addUsers",addUsers);
+        ServerHandler.Notify groupChangeNotify = serverHandler.new Notify(
+                new GroupMessageChangeNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap,userService));
+        groupChangeNotify.notifyUser();
+    }
+
+    @Override
+    public void notifyUsersIsKickout(Set<Long> userIdSet, long groupId) throws IoSessionIllegalException {
+        Map<String,Object> paramterMap = new HashMap<>();
+        paramterMap.put("groupId",groupId);
+        ServerHandler.Notify kickoutFromGroupNotify = serverHandler.new Notify(
+                new KickoutGroupNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap));
+        kickoutFromGroupNotify.notifyUser();
     }
 
 

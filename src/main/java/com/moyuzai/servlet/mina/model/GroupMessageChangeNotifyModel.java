@@ -3,8 +3,11 @@ package com.moyuzai.servlet.mina.model;
 import com.google.gson.Gson;
 import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.exception.IoSessionIllegalException;
+import com.moyuzai.servlet.service.UserGroupService;
+import com.moyuzai.servlet.service.UserService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import proto.MessageProtoBuf;
 
 import java.util.HashMap;
@@ -13,11 +16,14 @@ import java.util.Set;
 
 public class GroupMessageChangeNotifyModel extends NotifyModel implements NotifyUser{
 
+    private UserService userService;
+
     private long groupId;
 
     public GroupMessageChangeNotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
-                                         Set<Long> userIds, Map<String, Object> paramter) {
-        super(message, session, sessionMap, userIds, paramter);
+                                         UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap, UserService userService) {
+        super(message, session, sessionMap, userGroupService, userIdSet, paramterMap);
+        this.userService = userService;
     }
 
     @Override
@@ -35,7 +41,7 @@ public class GroupMessageChangeNotifyModel extends NotifyModel implements Notify
         if (DataFormatTransformUtil.isNullOrEmpty(managerId))
             return false;
 
-        long picId = (long) paramterMap.get("picId");
+        int picId = (int) paramterMap.get("picId");
         if (DataFormatTransformUtil.isNullOrEmpty(picId))
             return false;
 
@@ -84,7 +90,7 @@ public class GroupMessageChangeNotifyModel extends NotifyModel implements Notify
             boolean isPackingSuccess = packingProtoMessage();
             if (!isPackingSuccess)
                 return;
-            notifyAllUsers(userIdSet,groupId,message);
+            notifyAllUsers(userIdSet,groupId,message,userGroupService);
         }
     }
 

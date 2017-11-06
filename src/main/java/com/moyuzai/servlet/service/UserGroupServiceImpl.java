@@ -85,7 +85,7 @@ public class UserGroupServiceImpl implements UserGroupService {
      * @return
      */
     @Override
-    public ServiceData signoutFromGroup(long userId, long groupId) {
+    public ServiceData signoutFromGroup(long userId, long groupId) throws DeleteUserException{
         boolean isJoined = isJoined(groupId,userId);
         /**是否是该群组成员*/
         if (!isJoined)
@@ -94,13 +94,10 @@ public class UserGroupServiceImpl implements UserGroupService {
         int resultCount;
         try{
             resultCount = userGroupDao.deleteUserGroup(groupId,userId);
-        }catch (SQLException e1){
+        }catch (DataAccessException de){
+            logger.error("从群组中删除一个成员时出现异常："+de);
             throw new DeleteUserException("删除用户发生SQLException！");
-        }catch (Exception e){
-            logger.error(e.getMessage());
-            throw e;
         }
-
         if (resultCount>0){
             return new ServiceData(true,null);
             //通知其他人有人退群了
@@ -160,6 +157,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         JsonFormat jsonFormat = new JsonFormat();       //maven中这个jar包没有导入成功!
         String json = jsonFormat.printToString(protoMessage);//将protoMessage转换为String
         int effectCount = userGroupDao.addToOfflineText(json+",",userId,groupId);           //追加信息
+        logger.info("加入离线消息，影响行数："+effectCount);
         return effectCount;
     }
 
@@ -240,35 +238,39 @@ public class UserGroupServiceImpl implements UserGroupService {
      */
     @Transactional
     @Override
-    public void addUsersToGroup(Set<Long> userIdSet,long groupId)
-    throws AddUserToGroupErrorException{
+    public void addUsersToGroup(Set<Long> userIdSet,long groupId) throws AddUserToGroupErrorException{
         Iterator<Long> iterator = userIdSet.iterator();
         /**将管理者选择的用户加入该群组*/
+        int result;
         try {
             while (iterator.hasNext()) {
-                userGroupDao.saveUserGroup(groupId, iterator.next());
+                result = userGroupDao.saveUserGroup(groupId, iterator.next());
+                //插入结果小于1，则插入未成功，向上抛异常
+                if (result<=0){
+                    throw new AddUserToGroupErrorException("用户加入群组出现错误！");
+                }
             }
-        }catch (Exception e){
-            logger.error(e.getMessage());
+        }catch (DataAccessException de){
+            logger.error("向群组中添加多名用户时出现异常：");
+            de.printStackTrace();
             throw new AddUserToGroupErrorException("用户加入群组出现错误！");
         }
     }
 
     @Override
-    public void deleteUsersOfGroup(Set<Long> userIdSet, long groupId)
-    throws DeleteUserException{
+    public void deleteUsersOfGroup(Set<Long> userIdSet, long groupId) throws DeleteUserException{
         Iterator<Long> iterator = userIdSet.iterator();
         /**将管理者选择的用户踢出该群组*/
-        while (iterator.hasNext()) {
-            try {
+        try {
+            while (iterator.hasNext()) {
                 int deleteCount = userGroupDao.deleteUserGroup(groupId, iterator.next());
-                if (deleteCount==0)
+                if (deleteCount<=0)
                     throw new DeleteUserException("踢出用户错误异常！");
-            }catch (Exception e){
-                logger.error("踢出用户错误异常！");
-                logger.error(e.getMessage());
-                throw new DeleteUserException("踢出用户错误异常！");
             }
+        }catch (DataAccessException de){
+            logger.error("踢出用户错误异常！");
+            de.printStackTrace();
+            throw new DeleteUserException("踢出用户错误异常！");
         }
     }
 

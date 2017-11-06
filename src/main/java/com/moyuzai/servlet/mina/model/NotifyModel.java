@@ -1,10 +1,9 @@
 package com.moyuzai.servlet.mina.model;
 
-import com.googlecode.protobuf.format.JsonFormat;
 import com.moyuzai.servlet.dto.ServiceData;
-import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.entity.UserGroup;
 import com.moyuzai.servlet.exception.IoSessionIllegalException;
+import com.moyuzai.servlet.service.UserGroupService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
 import org.slf4j.Logger;
@@ -18,16 +17,18 @@ public abstract class NotifyModel extends MinaModel {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    protected UserGroupService userGroupService;
+
     protected Set<Long> userIdSet;
 
     protected Map<String,Object> paramterMap;
 
-
     public NotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
-                       Set<Long> userIds,Map<String,Object> paramter) {
+                       UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap) {
         super(message, session, sessionMap);
-        userIdSet = userIds;
-        paramterMap = paramter;
+        this.userGroupService = userGroupService;
+        this.userIdSet = userIdSet;
+        this.paramterMap = paramterMap;
     }
 
     abstract protected boolean packingProtoMessage();
@@ -42,7 +43,8 @@ public abstract class NotifyModel extends MinaModel {
 
     protected void notifyAllUsers(Set<Long> userIds,
                                   long groupId,
-                                  MessageProtoBuf.ProtoMessage protoMessage) throws IoSessionIllegalException {
+                                  MessageProtoBuf.ProtoMessage protoMessage,
+                                  UserGroupService userGroupService) throws IoSessionIllegalException {
         if (userIds.isEmpty())
             return;
         for (long userId:userIds){
@@ -51,6 +53,7 @@ public abstract class NotifyModel extends MinaModel {
                 getSessionByUserId(userId,session).write(protoMessage);     //依次发送通知
             }else {	//不在线，则保存在离线信息中
                 logger.info("用户："+userId+"离线，将推送信息保存在数据库中。。");
+                logger.info("userGroupService is null?"+DataFormatTransformUtil.isNullOrEmpty(userGroupService));
                 userGroupService.insertOfflineText(protoMessage,userId,groupId);
             }
         }
@@ -62,7 +65,9 @@ public abstract class NotifyModel extends MinaModel {
      * @param groupId
      * @param protoMessage
      */
-    public void groupDismissNotify(Set<Long> userIdSet,long groupId,MessageProtoBuf.ProtoMessage protoMessage)
+    public void groupDismissNotify(Set<Long> userIdSet, long groupId,
+                                   MessageProtoBuf.ProtoMessage protoMessage,
+                                   UserGroupService userGroupService)
             throws IoSessionIllegalException {
         for (long userId:userIdSet){
             if (sessionMap.containsKey(userId)){	//表示在线

@@ -1,8 +1,10 @@
 package com.moyuzai.servlet.mina.model;
 
 import com.moyuzai.servlet.exception.IoSessionIllegalException;
+import com.moyuzai.servlet.service.UserGroupService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import proto.MessageProtoBuf;
 
 import java.util.Map;
@@ -13,8 +15,8 @@ public class GroupDissmissNotifyModel extends NotifyModel implements NotifyUser 
     protected long groupId;
 
     public GroupDissmissNotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
-                                    Set<Long> userIds, Map<String, Object> paramter) {
-        super(message, session, sessionMap, userIds, paramter);
+                                    UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap) {
+        super(message, session, sessionMap, userGroupService, userIdSet, paramterMap);
     }
 
     @Override
@@ -34,7 +36,7 @@ public class GroupDissmissNotifyModel extends NotifyModel implements NotifyUser 
             boolean isPackingSuccess = packingProtoMessage();
             if (!isPackingSuccess)
                 return;
-            groupDismissNotify(userIdSet,groupId,message);
+            groupDismissNotify(userIdSet,groupId,message,userGroupService);
         }
     }
 

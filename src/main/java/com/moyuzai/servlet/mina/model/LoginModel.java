@@ -11,12 +11,18 @@ import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import proto.MessageProtoBuf;
 
 /**
  * 将用户存入session列表
  */
 public class LoginModel extends MinaModel{
+
+	@Autowired
+	private UserService userService;
+	@Autowired
+	private UserGroupService userGroupService;
 
 	private static final Logger logger = LoggerFactory.getLogger(LoginModel.class);
 

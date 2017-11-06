@@ -5,14 +5,14 @@ import com.moyuzai.servlet.dto.ServiceData;
 import com.moyuzai.servlet.dto.UsersResponse;
 import com.moyuzai.servlet.entity.Group;
 import com.moyuzai.servlet.entity.User;
-import com.moyuzai.servlet.exception.DataClassErrorException;
-import com.moyuzai.servlet.exception.TargetLostException;
+import com.moyuzai.servlet.exception.*;
 import org.springframework.dao.DataAccessException;
 import proto.MessageProtoBuf;
 
 import javax.servlet.http.HttpSession;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public interface ServiceProxy {
@@ -49,18 +49,19 @@ public interface ServiceProxy {
 
     UsersResponse deleteGroup(long managerId,long groupId);
 
-    UsersResponse deleteGroup(long groupId);
+    UsersResponse deleteGroup(long groupId)throws DeleteGroupException;
 
-    UsersResponse changeGroupPic(long groupId, long managerId, int picId,boolean cheched);
+    UsersResponse changeGroupPic(long groupId, long managerId, int picId,boolean cheched)throws AddPicIdErrorException;
 
-    UsersResponse changeGroupName(long groupId,long managerId,String groupName,boolean cheched);
+    UsersResponse changeGroupName(long groupId,long managerId,String groupName,boolean cheched)throws ChangeGroupNameException;
 
     UsersResponse updateGroupDate(long groupId,long managerId,Integer picId,
                                   String groupName,String addUsers,String minusUsers);
 
     UsersResponse createGroup(String groupName, long managerId) throws DataClassErrorException;
 
-    UsersResponse createGroupWithInit(Set<Long> userIdSet,long managerId,String groupName,int picId);
+    UsersResponse createGroupWithInit(Set<Long> userIdSet,long managerId,String groupName,int picId) throws
+            CreateGroupErrorException, AddPicIdErrorException, AddUserToGroupErrorException, DataClassErrorException;
 
     /**代理关系表操作*/
     UsersResponse getAll(int offset, int resultCount);
@@ -69,7 +70,7 @@ public interface ServiceProxy {
 
     UsersResponse joinGroup(long userId, long groupId);
 
-    UsersResponse signoutFromGroup(long userId, long groupId);
+    UsersResponse signoutFromGroup(long userId, long groupId)throws DeleteUserException;
 
     UsersResponse queryAllUserIdOfGroup(long groupId);
 
@@ -77,5 +78,14 @@ public interface ServiceProxy {
 
     /**代理mina*/
 
+    void notifyUserIsPulledIntoGroup(Set<Long> userIdSet,long groupId) throws IoSessionIllegalException, DataClassErrorException, TargetLostException;
+
+    void notifySomeJoined(long userId,long groupId) throws IoSessionIllegalException;
+
+    void notifyUserGroupIsDisMissed(Set<Long> userIdSet,long groupId) throws IoSessionIllegalException;
+
+    void notifyUsersGroupMessageChange(Set<Long> userIdSet,Group group,String addUsers) throws IoSessionIllegalException;
+
+    void notifyUsersIsKickout(Set<Long> userIdSet,long groupId) throws IoSessionIllegalException;
 
 }

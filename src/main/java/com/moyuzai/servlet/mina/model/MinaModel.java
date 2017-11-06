@@ -7,18 +7,15 @@ import com.moyuzai.servlet.service.UserService;
 import com.moyuzai.servlet.util.DataFormatTransformUtil;
 import org.apache.mina.core.session.IoSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 import proto.MessageProtoBuf;
 
 import java.util.Map;
 
+@Component
 public abstract class MinaModel {
-
-    @Autowired
-    protected UserService userService;
-    @Autowired
-    protected GroupService groupService;
-    @Autowired
-    protected UserGroupService userGroupService;
 
     protected MessageProtoBuf.ProtoMessage message;
 

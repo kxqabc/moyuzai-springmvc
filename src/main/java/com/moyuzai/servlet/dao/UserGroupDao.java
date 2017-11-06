@@ -33,7 +33,7 @@ public interface UserGroupDao {
 
     /**去除一个关系表内容*/
     int deleteUserGroup(@Param("groupId")long groupId,
-                        @Param("userId")long userId)throws SQLException;
+                        @Param("userId")long userId)throws DataAccessException;
 
     int deleteUserGroupById(@Param("id")long id);
 
