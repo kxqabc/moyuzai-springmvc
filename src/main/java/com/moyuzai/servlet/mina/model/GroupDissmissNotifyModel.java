@@ -14,9 +14,9 @@ public class GroupDissmissNotifyModel extends NotifyModel implements NotifyUser 
 
     protected long groupId;
 
-    public GroupDissmissNotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
+    public GroupDissmissNotifyModel(MessageProtoBuf.ProtoMessage message, Map<Long, IoSession> sessionMap, Map<Long, Long> idMap,
                                     UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap) {
-        super(message, session, sessionMap, userGroupService, userIdSet, paramterMap);
+        super(message, sessionMap, idMap, userGroupService, userIdSet, paramterMap);
     }
 
     @Override

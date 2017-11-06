@@ -338,7 +338,7 @@ public class MyController {
     public UsersResponse createGroupWithInit(@RequestParam("users")String users,
                                              @RequestParam("picId")int picId,
                                              @RequestParam("groupName")String groupName,
-                                             @RequestParam("managerId")long managerId){
+                                             @RequestParam("managerId")long managerId) throws TargetLostException, IoSessionIllegalException {
         logger.info("创建群组（包含群组头像、群组成员）。。");
         logger.info("users:"+users);
         logger.info("picId:"+picId);
@@ -382,13 +382,7 @@ public class MyController {
             return new UsersResponse(MyEnum.ADD_GROUP_PIC_FAIL);
         }catch (AddUserToGroupErrorException e3){   //将用户添加入群组时出现错误
             return new UsersResponse(MyEnum.REMAIN_USERS);
-        } catch (TargetLostException e) {
-            e.printStackTrace();
-            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
-        } catch (DataClassErrorException e) {
-            e.printStackTrace();
-            return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
-        } catch (IoSessionIllegalException e) {
+        }  catch (DataClassErrorException e) {
             e.printStackTrace();
             return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
         }
@@ -407,7 +401,7 @@ public class MyController {
         try {
             groupResponse = serviceProxy.getGroupById(groupId);
         } catch (DataClassErrorException e) {
-            e.printStackTrace();
+            logger.error("根据群组ID查询群组信息时发生异常："+e.getMessage());
             return new GroupResponse(MyEnum.DATABASE_CLASS_ERROR);
         }
         return groupResponse;
@@ -433,10 +427,8 @@ public class MyController {
         }
         if (usersResponse.isState()){
             //通知其他人有人加入该群组
-            UsersResponse userIdSetResult = serviceProxy.queryAllUserIdOfGroup(groupId);
-            if (userIdSetResult.isState()){
-                serviceProxy.notifySomeJoined(userId,groupId);
-            }
+            serviceProxy.notifySomeJoined(userId,groupId);
+
         }
         return usersResponse;
     }
@@ -450,11 +442,14 @@ public class MyController {
     @ResponseBody
     @RequestMapping(value = "/signoutFromGroup")
     public UsersResponse signoutFromGroup(@RequestParam(value = "userId")long userId,
-                                          @RequestParam(value = "groupId")long groupId){
+                                          @RequestParam(value = "groupId")long groupId) throws DataClassErrorException, IoSessionIllegalException, TargetLostException {
         logger.info("退出群组。。");
         UsersResponse usersResponse;
         try{
             usersResponse = serviceProxy.signoutFromGroup(userId,groupId);
+            if(usersResponse.isState()){
+                serviceProxy.notifySomeoneQuit(userId,groupId);
+            }
         }catch (DeleteUserException e1){
             logger.error("退出群组："+groupId+"时出现异常DeleteUserException："+e1.getMessage());
             MyEnum.SIGNOUT_GROUP_FAIL.setStateInfo("退出群"+groupId+"失败！");
@@ -508,7 +503,7 @@ public class MyController {
                                          @RequestParam(value = "picId",required = false)Integer picId,
                                          @RequestParam(value = "groupName",required = false)String groupName,
                                          @RequestParam(value = "addUsers",required = false)String addUsers,
-                                         @RequestParam(value = "minusUsers",required = false)String minusUsers){
+                                         @RequestParam(value = "minusUsers",required = false)String minusUsers) throws IoSessionIllegalException, TargetLostException {
         logger.info("修改群组资料。。");
         logger.info("picId:"+picId+",groupName:"+groupName+",users:"+addUsers+"/"+minusUsers);
         try {
@@ -550,15 +545,9 @@ public class MyController {
         }catch (NumberFormatException e5){
             logger.error("数字转换时出现异常："+e5);
             return new UsersResponse(MyEnum.STRING_FORMAT_REEOR);
-        }catch (TargetLostException e6){
-            logger.error("修改群组资料时目标丢失异常："+e6);
-            return new UsersResponse(MyEnum.TARGET_LOST);
         } catch (DataClassErrorException e7) {
             logger.error("修改群组资料时出现异常DataClassErrorException："+e7);
             return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
-        } catch (IoSessionIllegalException e8) {
-            logger.error("修改群组资料时出现异常IoSessionIllegalException："+e8);
-            return new UsersResponse(MyEnum.INNER_REEOR);
         }
     }
 

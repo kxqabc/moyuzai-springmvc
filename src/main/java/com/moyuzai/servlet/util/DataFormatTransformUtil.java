@@ -40,8 +40,8 @@ public class DataFormatTransformUtil{
      * @param body
      * @return
      */
-    public static MessageProtoBuf.ProtoMessage packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type type, String sendTime,
-                                                                           String body){
+    public static MessageProtoBuf.ProtoMessage packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type type,
+                                                                           String sendTime, String body){
         MessageProtoBuf.ProtoMessage.Builder builder =
                 MessageProtoBuf.ProtoMessage.newBuilder();
         builder.setType(type);

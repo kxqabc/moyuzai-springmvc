@@ -270,6 +270,9 @@ public class ServiceProxyImpl implements ServiceProxy{
         //踢出组员
         if (!DataFormatTransformUtil.isNullOrEmpty(minusUsers)){
             Set<Long> minusUsersIdSet = DataFormatTransformUtil.StringToLongSet(minusUsers);
+            //如果minusUsers参数中包含管理者用户，则抛出异常
+            if (minusUsersIdSet.contains(managerId))
+                throw new DeleteUserException("修改群组信息时踢出管理者是非法的！");
             //将users依次踢出group
             if (!DataFormatTransformUtil.isNullOrEmpty(minusUsersIdSet)){
                 userGroupService.deleteUsersOfGroup(minusUsersIdSet,groupId);
@@ -306,6 +309,9 @@ public class ServiceProxyImpl implements ServiceProxy{
         if (!DataFormatTransformUtil.isNullOrEmpty(addUsers)){
             logger.info("addUsers:"+addUsers);
             Set<Long> addUsersIdSet = DataFormatTransformUtil.StringToLongSet(addUsers);
+            //不用再添加管理者用户
+            if (addUsersIdSet.contains(managerId))
+                addUsersIdSet.remove(managerId);
             //将users依次加入group中
             if (!DataFormatTransformUtil.isNullOrEmpty(addUsersIdSet)){
                 userGroupService.addUsersToGroup(addUsersIdSet,groupId);
@@ -462,7 +468,7 @@ public class ServiceProxyImpl implements ServiceProxy{
             Group group = groupResponse.getGroup();
             paramterMap.put("group",group);
             ServerHandler.Notify pulledIntoGroupNotify = serverHandler.new Notify(
-                    new PulledIntoGroupNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap));
+                    new PulledIntoGroupNotifyModel(null,serverHandler.getIoSessionMap(),serverHandler.getIdMap(),userGroupService,userIdSet,paramterMap));
             pulledIntoGroupNotify.notifyUser();
             logger.info("通知用户已经被拉入群组成功");
         }else
@@ -484,7 +490,7 @@ public class ServiceProxyImpl implements ServiceProxy{
             paramterMap.put("userId",userId);
             paramterMap.put("groupId",groupId);
             ServerHandler.Notify someoneJoinGroupNotify = serverHandler.new Notify(
-                    new JoinGroupNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap,userService));
+                    new JoinGroupNotifyModel(null,serverHandler.getIoSessionMap(),serverHandler.getIdMap(),userGroupService,userIdSet,paramterMap,userService));
             someoneJoinGroupNotify.notifyUser();
         }
     }
@@ -494,13 +500,14 @@ public class ServiceProxyImpl implements ServiceProxy{
         Map<String,Object> paramterMap = new HashMap<>();
         paramterMap.put("groupId",groupId);
         ServerHandler.Notify dismissGroupNotify = serverHandler.new Notify(
-                new GroupDissmissNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap));
+                new GroupDissmissNotifyModel(null,serverHandler.getIoSessionMap(),serverHandler.getIdMap(),userGroupService,userIdSet,paramterMap));
         dismissGroupNotify.notifyUser();
     }
 
     @Override
     public void notifyUsersGroupMessageChange(Set<Long> userIdSet, Group group, String addUsers) throws IoSessionIllegalException {
-        if (DataFormatTransformUtil.isNullOrEmpty(group)) {
+        if (DataFormatTransformUtil.isNullOrEmpty(group) || DataFormatTransformUtil.isNullOrEmpty(userIdSet)) {
+            logger.warn("通知群组信息改变时形参group或userIdSet为null！");
             return;
         }
         Map<String,Object> paramterMap = new HashMap<>();
@@ -512,7 +519,7 @@ public class ServiceProxyImpl implements ServiceProxy{
         paramterMap.put("managerName",group.getManagerName());
         paramterMap.put("addUsers",addUsers);
         ServerHandler.Notify groupChangeNotify = serverHandler.new Notify(
-                new GroupMessageChangeNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap,userService));
+                new GroupMessageChangeNotifyModel(null,serverHandler.getIoSessionMap(),serverHandler.getIdMap(),userGroupService,userIdSet,paramterMap,userService));
         groupChangeNotify.notifyUser();
     }
 
@@ -521,8 +528,38 @@ public class ServiceProxyImpl implements ServiceProxy{
         Map<String,Object> paramterMap = new HashMap<>();
         paramterMap.put("groupId",groupId);
         ServerHandler.Notify kickoutFromGroupNotify = serverHandler.new Notify(
-                new KickoutGroupNotifyModel(null,null,serverHandler.getSessionMap(),userGroupService,userIdSet,paramterMap));
+                new KickoutGroupNotifyModel(null,serverHandler.getIoSessionMap(),serverHandler.getIdMap(),userGroupService,userIdSet,paramterMap));
         kickoutFromGroupNotify.notifyUser();
+    }
+
+    @Override
+    public void notifySomeoneQuit(long userId, long groupId) throws DataClassErrorException, TargetLostException, IoSessionIllegalException {
+        Map<String,Object> paramterMap = new HashMap<>();
+        ServiceData userIdsData = userGroupService.queryAllUserIdOfGroup(groupId);
+        GroupResponse groupResponse = getGroupWithMoreDetail(groupId);
+        Group group;
+        long managerId;
+        if (groupResponse.isState()) {
+            group = groupResponse.getGroup();
+            managerId = group.getManagerId();
+        }
+        else {
+            return;
+        }
+        paramterMap.put("groupId",groupId);
+        paramterMap.put("userId",userId);
+        paramterMap.put("amount",group.getAmount());
+        paramterMap.put("managerId",managerId);
+        if (userIdsData.isState() && groupResponse.isState()) {
+            List<Long> userIds = (List<Long>) userIdsData.getData();
+            Set<Long> userIdSet = new HashSet<>();
+            userIdSet.addAll(userIds);
+            if (userIdSet.contains(managerId))
+                userIdSet.remove(managerId);
+            ServerHandler.Notify someoneQuitNotify = serverHandler.new Notify(
+                    new SomeoneQuitNotifyModel(null,serverHandler.getIoSessionMap(),serverHandler.getIdMap(),userGroupService,userIdSet,paramterMap));
+            someoneQuitNotify.notifyUser();
+        }
     }
 
 

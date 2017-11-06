@@ -69,4 +69,17 @@ public class Group {
     public void setManagerName(String managerName) {
         this.managerName = managerName;
     }
+
+    @Override
+    public String toString() {
+        return "Group{" +
+                "id=" + id +
+                ", groupName='" + groupName + '\'' +
+                ", managerId=" + managerId +
+                ", picId=" + picId +
+                ", createTime=" + createTime +
+                ", managerName='" + managerName + '\'' +
+                ", amount=" + amount +
+                '}';
+    }
 }

@@ -23,9 +23,9 @@ public abstract class NotifyModel extends MinaModel {
 
     protected Map<String,Object> paramterMap;
 
-    public NotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
+    public NotifyModel(MessageProtoBuf.ProtoMessage message, Map<Long, IoSession> sessionMap, Map<Long, Long> idMap,
                        UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap) {
-        super(message, session, sessionMap);
+        super(message, sessionMap, idMap);
         this.userGroupService = userGroupService;
         this.userIdSet = userIdSet;
         this.paramterMap = paramterMap;
@@ -48,14 +48,25 @@ public abstract class NotifyModel extends MinaModel {
         if (userIds.isEmpty())
             return;
         for (long userId:userIds){
-            if (sessionMap.containsKey(userId)){	//表示在线
+            if (isOnline(userId)){	//表示在线
                 logger.info("用户："+userId+"在线,立即推送。。");
-                getSessionByUserId(userId,session).write(protoMessage);     //依次发送通知
+                getSessionByUserId(userId).write(protoMessage);     //依次发送通知
             }else {	//不在线，则保存在离线信息中
                 logger.info("用户："+userId+"离线，将推送信息保存在数据库中。。");
                 logger.info("userGroupService is null?"+DataFormatTransformUtil.isNullOrEmpty(userGroupService));
                 userGroupService.insertOfflineText(protoMessage,userId,groupId);
             }
+        }
+    }
+
+    protected void notifyUser(long userId,long groupId,MessageProtoBuf.ProtoMessage protoMessage, UserGroupService userGroupService) throws IoSessionIllegalException {
+        if (isOnline(userId)){	//表示在线
+            logger.info("用户："+userId+"在线,立即推送。。");
+            getSessionByUserId(userId).write(protoMessage);     //依次发送通知
+        }else {	//不在线，则保存在离线信息中
+            logger.info("用户："+userId+"离线，将推送信息保存在数据库中。。");
+            logger.info("userGroupService is null?"+DataFormatTransformUtil.isNullOrEmpty(userGroupService));
+            userGroupService.insertOfflineText(protoMessage,userId,groupId);
         }
     }
 
@@ -70,9 +81,9 @@ public abstract class NotifyModel extends MinaModel {
                                    UserGroupService userGroupService)
             throws IoSessionIllegalException {
         for (long userId:userIdSet){
-            if (sessionMap.containsKey(userId)){	//表示在线
+            if (isOnline(userId)){	//表示在线
                 logger.info("用户："+userId+"在线,立即推送。。");
-                getSessionByUserId(userId,session).write(protoMessage);     //依次发送通知
+                getSessionByUserId(userId).write(protoMessage);     //依次发送通知
             }else {	//不在线，则保存在离线信息中
                 logger.info("用户："+userId+"离线，将推送信息保存在数据库中。。");
                 ServiceData serviceData = userGroupService.queryAnotherGroupOfUser(groupId,userId);

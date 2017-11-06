@@ -10,9 +10,9 @@ import java.util.Set;
 
 public class KickoutGroupNotifyModel extends GroupDissmissNotifyModel {
 
-    public KickoutGroupNotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
+    public KickoutGroupNotifyModel(MessageProtoBuf.ProtoMessage message, Map<Long, IoSession> sessionMap, Map<Long, Long> idMap,
                                    UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap) {
-        super(message, session, sessionMap, userGroupService, userIdSet, paramterMap);
+        super(message, sessionMap, idMap, userGroupService, userIdSet, paramterMap);
     }
 
     @Override
@@ -20,7 +20,7 @@ public class KickoutGroupNotifyModel extends GroupDissmissNotifyModel {
         groupId = (long) paramterMap.get("groupId");
         if (DataFormatTransformUtil.isNullOrEmpty(groupId))
             return false;
-        MessageProtoBuf.ProtoMessage message = DataFormatTransformUtil.packingToProtoMessageOption(
+        message = DataFormatTransformUtil.packingToProtoMessageOption(
                 MessageProtoBuf.ProtoMessage.Type.QUIT_GROUP_NOTIFY,""+groupId);
         return true;
     }

@@ -88,4 +88,6 @@ public interface ServiceProxy {
 
     void notifyUsersIsKickout(Set<Long> userIdSet,long groupId) throws IoSessionIllegalException;
 
+    void notifySomeoneQuit(long userId,long groupId) throws DataClassErrorException, TargetLostException, IoSessionIllegalException;
+
 }

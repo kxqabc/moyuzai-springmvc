@@ -19,31 +19,34 @@ public abstract class MinaModel {
 
     protected MessageProtoBuf.ProtoMessage message;
 
-    protected IoSession session;
+    protected Map<Long,IoSession> sessionMap;
 
-    protected Map<Long,Long> sessionMap;
+    protected Map<Long,Long> idMap;
 
-    public MinaModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap) {
+    public MinaModel(MessageProtoBuf.ProtoMessage message, Map<Long, IoSession> sessionMap, Map<Long, Long> idMap) {
         this.message = message;
-        this.session = session;
         this.sessionMap = sessionMap;
+        this.idMap = idMap;
+    }
+
+    protected boolean isOnline(long userId){
+        if (DataFormatTransformUtil.isNullOrEmpty(idMap))
+            return false;
+        if (idMap.containsKey(userId))
+            return true;
+        else
+            return false;
     }
 
     protected abstract void handle() throws IoSessionIllegalException;
 
-    protected Map<Long,IoSession> getSessions(IoSession session) throws IoSessionIllegalException {
-        if (DataFormatTransformUtil.isNullOrEmpty(session))
-            throw new IoSessionIllegalException("session为空！");
-        Map<Long,IoSession> sessions = session.getService().getManagedSessions();
-        return sessions;
-    }
-
-    protected IoSession getSessionByUserId(long userId,IoSession session) throws IoSessionIllegalException {
-        Map<Long,IoSession> sessions = getSessions(session);
-        long sessionId = sessionMap.get(userId);
+    protected IoSession getSessionByUserId(long userId) throws IoSessionIllegalException {
+        if (DataFormatTransformUtil.isNullOrEmpty(sessionMap))
+            throw new IoSessionIllegalException("MinaModel获取session时发生异常！");
+        long sessionId = idMap.get(userId);
         if (DataFormatTransformUtil.isNullOrEmpty(sessionId))
             throw new IoSessionIllegalException("在session映射表中找不到对应userId的sessionId！");
-        return sessions.get(sessionId);
+        return sessionMap.get(sessionId);
     }
 
 }

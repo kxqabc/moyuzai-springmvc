@@ -26,9 +26,9 @@ public class JoinGroupNotifyModel extends NotifyModel implements NotifyUser{
 
     private long groupId;
 
-    public JoinGroupNotifyModel(MessageProtoBuf.ProtoMessage message, IoSession session, Map<Long, Long> sessionMap,
+    public JoinGroupNotifyModel(MessageProtoBuf.ProtoMessage message, Map<Long, IoSession> sessionMap, Map<Long, Long> idMap,
                                 UserGroupService userGroupService, Set<Long> userIdSet, Map<String, Object> paramterMap, UserService userService) {
-        super(message, session, sessionMap, userGroupService, userIdSet, paramterMap);
+        super(message, sessionMap, idMap, userGroupService, userIdSet, paramterMap);
         this.userService = userService;
     }
 

@@ -17,16 +17,22 @@ import proto.MessageProtoBuf;
  * 将用户存入session列表
  */
 public class ChatModel extends MinaModel{
+
 	private Logger logger = LoggerFactory.getLogger(this.getClass());
 
-	@Autowired
 	private UserGroupService userGroupService;
 
+	private IoSession mSession;
+
 	private long fromId;
+
 	private long groupId;
 
-	public ChatModel(Map<Long, Long> map, IoSession session, MessageProtoBuf.ProtoMessage protoMessage) {
-		super(protoMessage,session,map);
+	public ChatModel(MessageProtoBuf.ProtoMessage message, Map<Long, IoSession> sessionMap, Map<Long, Long> idMap,
+					 UserGroupService userGroupService, IoSession mSession) {
+		super(message, sessionMap, idMap);
+		this.userGroupService = userGroupService;
+		this.mSession = mSession;
 	}
 
 	public boolean checkUp(){
@@ -51,33 +57,32 @@ public class ChatModel extends MinaModel{
 			logger.info("发送群聊消息检验：群组ID错误或用户不在该群组中！");
 			//服务器聊天核对失败回执
 			chatResponse = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.CHAT_RESPONSE, sendTime,"error");
-			session.write(chatResponse);
+			mSession.write(chatResponse);
 		}else {				//成功通过检验
 			//服务器聊天核对成功回执
 			chatResponse = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.CHAT_RESPONSE,sendTime, "ok");
-			session.write(chatResponse);
+			mSession.write(chatResponse);
 			ServiceData serviceData = userGroupService.queryAllUserIdOfGroup(groupId);
-			List<Long> userIdList = null;
+			List<Long> userIdList;
 			if (serviceData.isState()){
-				return;
-			}else {
 				userIdList = (List<Long>) serviceData.getData();
+			}else {
+				return;
 			}
 			//将信息发送者从发送名单列表中除去
-			Long aLong = new Long(fromId);
-			userIdList.remove(aLong);
+			if (userIdList.contains(fromId))
+				userIdList.remove(fromId);
 			//推送信息：两种方式
-			if (userIdList != null && userIdList.size() > 0) {
+			if (!DataFormatTransformUtil.isNullOrEmpty(userIdList)) {
 				for (long userId : userIdList) {
-					logger.info("userId="+userId);
-					if(sessionMap.containsKey(userId)){
+					if(isOnline(userId)){
 						//用户在线，马上推送
-						getSessionByUserId(userId,session).write(message);
+						getSessionByUserId(userId).write(message);
 						logger.info("用户："+userId+"在线，推送消息："+message.getBody());
 					}else{
 						//用户不在线
-						logger.info("插入离线信息:"+message);
 						userGroupService.insertOfflineText(message, userId, groupId);
+						logger.info("用户："+userId+"不在线，插入离线信息:"+message.getBody());
 					}
 				}
 			}
