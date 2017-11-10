@@ -28,9 +28,9 @@ import java.util.*;
 /**
  * Created by kong on 17-6-19.
  */
+
 @Controller
 @RequestMapping("/")
-
 public class MyController {
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -48,7 +48,6 @@ public class MyController {
     @RequestMapping(value = "/Controller")
     public String transponder(@RequestParam("type") String type,HttpServletRequest request,
                               ModelAndView modelAndView){
-//        logger.info("请求进入控制转发器。。");
         switch (type){
             case "users":return "forward:/users";
             case "groups":return "forward:/groups";
@@ -85,8 +84,6 @@ public class MyController {
     @ResponseBody
     @RequestMapping(value = "/getById")
     public UsersResponse queryUserById(@RequestParam("id") long id){
-        logger.info("按ID查询用户。。");
-        logger.info("id:"+id);
         UsersResponse usersResponse = null;
         try {
             usersResponse = serviceProxy.getUserById(id);
@@ -94,7 +91,6 @@ public class MyController {
             e.printStackTrace();
             return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
         }
-        logger.info(usersResponse.toString());
         return usersResponse;
     }
 
@@ -105,10 +101,7 @@ public class MyController {
     @RequestMapping(value = "/sendLoginMessage")
     public UsersResponse sendLoginMessage(@RequestParam("mobile") String mobile,
                                           HttpSession httpSession){
-        logger.info("发送短信获取验证码。。");
-        logger.info("mobile:"+mobile);
         UsersResponse usersResponse = serviceProxy.sendLoginMessage(mobile,httpSession);
-        logger.info(usersResponse.toString());
         return usersResponse;
     }
 
@@ -118,25 +111,21 @@ public class MyController {
     @ResponseBody
     @RequestMapping(value = "/users")
     public UsersResponse queryAllUsers(@RequestParam("pageNum") int pageNum){
-        logger.info("查询所有用户。。");
-        logger.info("pageNum:"+pageNum);
-        /**pageNum从1开始*/
+        //pageNum从1开始
         UsersResponse usersResponse = serviceProxy.getAllUsers(STEP*(pageNum-1), STEP*pageNum);
         return usersResponse;
     }
     @ResponseBody
     @RequestMapping(value = "/groups")
     public UsersResponse groups(@RequestParam("pageNum") int pageNum){
-        logger.info("查询所有群组。。");
-        /**pageNum从1开始*/
+        //pageNum从1开始
         UsersResponse usersResponse = serviceProxy.getAllGroups(STEP*(pageNum-1), STEP*pageNum);
         return usersResponse;
     }
     @ResponseBody
     @RequestMapping(value = "/userGroups")
     public UsersResponse userGroups(@RequestParam("pageNum") int pageNum){
-        logger.info("查询所有关系表数据。。");
-        /**pageNum从1开始*/
+        //pageNum从1开始
         UsersResponse usersResponse = serviceProxy.getAll(STEP*(pageNum-1), STEP*pageNum);
         return usersResponse;
     }
@@ -149,19 +138,16 @@ public class MyController {
     @ResponseBody
     @RequestMapping(value = "/deleteUserById")
     public UsersResponse deleteUserById(@RequestParam(value = "userId")long userId){
-        logger.info("删除用户。。");
         return serviceProxy.deleteUserById(userId);
     }
     @ResponseBody
     @RequestMapping(value = "/deleteGroupById")
     public UsersResponse deleteGroupById(@RequestParam(value = "groupId")long groupId){
-        logger.info("删除群组。。");
         return serviceProxy.deleteGroup(groupId);
     }
     @ResponseBody
     @RequestMapping(value = "/deleteUserGroupById" )
     public UsersResponse deleteUserGroupById(@RequestParam(value = "id")long id){
-        logger.info("删除关系表中一条数据。。");
         return serviceProxy.deleteUserOfGroup(id);
     }
 
@@ -172,8 +158,6 @@ public class MyController {
     @RequestMapping(value = "/getByMobile")
     public UsersResponse queryUserByMobile(@RequestParam("mobile") String mobile,
                                            HttpSession httpSession){
-        logger.info("按手机号码查询用户。。");
-        logger.info("mobile:"+mobile);
         UsersResponse usersResponse;
         try {
             usersResponse = serviceProxy.getUserByMobile(mobile);
@@ -181,17 +165,13 @@ public class MyController {
             e.printStackTrace();
             return new UsersResponse(MyEnum.DATABASE_CLASS_ERROR);
         }
-        logger.info(usersResponse.toString());
         return usersResponse;
     }
 
     @ResponseBody
     @RequestMapping(value = "/getUsersOfGroup")
     public UsersResponse getUsersOfGroup(@RequestParam("groupId") long groupId){
-        logger.info("按群组ID查询用户。。");
-        logger.info("groupId:"+groupId);
         UsersResponse usersResponse = serviceProxy.getUsersOfGroup(groupId);
-        logger.info(usersResponse.toString());
         return usersResponse;
     }
 
@@ -202,8 +182,6 @@ public class MyController {
     @RequestMapping(value = "/matchCode")
     public UsersResponse matchCode(@RequestParam("textCode") String textCode,
                                    HttpSession httpSession){
-        logger.info("核对验证码。。");
-        logger.info("textCode:"+textCode);
         String originCode = (String) httpSession.getAttribute("textCode");
         if (DataFormatTransformUtil.isNullOrEmpty(originCode)){
             return new UsersResponse(MyEnum.NO_TEXT_CODE);
@@ -223,9 +201,6 @@ public class MyController {
     public UsersResponse registerUser(@RequestParam(value = "name")String userName,
                                       @RequestParam(value = "password")String password,
                                       HttpSession httpSession){
-        logger.info("注册用户。。");
-        logger.info("name:"+userName);
-        logger.info("password:"+password);
         //从httpSession中获取用户之前填写的手机号
         String mobile = (String) httpSession.getAttribute("mobile");
         if (DataFormatTransformUtil.isNullOrEmpty(mobile))  //获取不到手机号
@@ -253,7 +228,6 @@ public class MyController {
     @RequestMapping(value = "/login")
     public UsersResponse login(@RequestParam("mobile")String mobile,
                                @RequestParam("password")String password){
-        logger.info("用户登录。。");
         UsersResponse usersResponse;
         usersResponse =  serviceProxy.userLogin(mobile,password);
         return usersResponse;
@@ -266,8 +240,6 @@ public class MyController {
     @RequestMapping(value = "/modifyPassword")
     public UsersResponse modifyPassword(@RequestParam(value = "password")String password,
                                         HttpSession httpSession){
-        logger.info("修改密码。。");
-        logger.info("password:"+password);
         String mobile = (String) httpSession.getAttribute("mobile");
         UsersResponse usersResponse;
         if (DataFormatTransformUtil.isNullOrEmpty(mobile))
@@ -291,7 +263,6 @@ public class MyController {
     @RequestMapping(value = "/sendResetPasswordMessage")
     public UsersResponse sendResetPasswordMessage(@RequestParam("mobile") String mobile,
                                               HttpSession httpSession){
-        logger.info("发送请求“重置密码”短信。。");
         UsersResponse usersResponse = serviceProxy.sendResetMessage(mobile,httpSession);
         return usersResponse;
     }
@@ -306,9 +277,6 @@ public class MyController {
     @RequestMapping(value = "/createGroup")
     public UsersResponse createGroup(@RequestParam("groupName")String groupName,
                             @RequestParam("managerId")long managerId){
-        logger.info("创建群组（不包含群组头像等信息）。。");
-        logger.info("groupName:"+groupName);
-        logger.info("managerId:"+managerId);
         UsersResponse usersResponse;
         try{
             usersResponse = serviceProxy.createGroup(groupName,managerId);
@@ -339,11 +307,6 @@ public class MyController {
                                              @RequestParam("picId")int picId,
                                              @RequestParam("groupName")String groupName,
                                              @RequestParam("managerId")long managerId) throws TargetLostException, IoSessionIllegalException {
-        logger.info("创建群组（包含群组头像、群组成员）。。");
-        logger.info("users:"+users);
-        logger.info("picId:"+picId);
-        logger.info("groupName:"+groupName);
-        logger.info("managerId:"+managerId);
         /**从String中提取用户ID信息*/
         Set<Long> userIdSet;
         try {
@@ -396,7 +359,6 @@ public class MyController {
     @ResponseBody
     @RequestMapping(value = "/getGroupById")
     public GroupResponse getGroupById(@RequestParam(value = "groupId")long groupId){
-        logger.info("根据群组ID查询群组信息。。");
         GroupResponse groupResponse = null;
         try {
             groupResponse = serviceProxy.getGroupById(groupId);
@@ -417,7 +379,6 @@ public class MyController {
     @RequestMapping(value = "/joinGroup")
     public UsersResponse joinGroup(@RequestParam(value = "userId")long userId,
                                    @RequestParam(value = "groupId")long groupId) throws IoSessionIllegalException {
-        logger.info("申请加入群组。。");
         UsersResponse usersResponse;
         try{
             usersResponse = serviceProxy.joinGroup(userId,groupId);
@@ -443,7 +404,6 @@ public class MyController {
     @RequestMapping(value = "/signoutFromGroup")
     public UsersResponse signoutFromGroup(@RequestParam(value = "userId")long userId,
                                           @RequestParam(value = "groupId")long groupId) throws DataClassErrorException, IoSessionIllegalException, TargetLostException {
-        logger.info("退出群组。。");
         UsersResponse usersResponse;
         try{
             usersResponse = serviceProxy.signoutFromGroup(userId,groupId);
@@ -468,7 +428,6 @@ public class MyController {
     @RequestMapping(value = "/dismissGroup")
     public UsersResponse dismissGroup(@RequestParam(value = "managerId")long managerId,
                                       @RequestParam(value = "groupId")long groupId) throws IoSessionIllegalException {
-        logger.info("解散群组。。");
         //解散群组前首先获取所有组员
         UsersResponse getUsersResponse = serviceProxy.queryAllUserIdOfGroup(groupId);
         List<Long> userIds = null;
@@ -504,8 +463,6 @@ public class MyController {
                                          @RequestParam(value = "groupName",required = false)String groupName,
                                          @RequestParam(value = "addUsers",required = false)String addUsers,
                                          @RequestParam(value = "minusUsers",required = false)String minusUsers) throws IoSessionIllegalException, TargetLostException {
-        logger.info("修改群组资料。。");
-        logger.info("picId:"+picId+",groupName:"+groupName+",users:"+addUsers+"/"+minusUsers);
         try {
             UsersResponse usersResponse = serviceProxy.updateGroupDate(groupId,
                             managerId,picId,groupName,addUsers,minusUsers);

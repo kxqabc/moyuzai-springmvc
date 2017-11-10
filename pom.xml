@@ -11,6 +11,7 @@
   <properties>
     <spring.version>4.2.2.RELEASE</spring.version>
     <spring-data.version>1.2.0.RELEASE</spring-data.version>
+    <aspectj.version>1.6.11</aspectj.version>
     <mina.version>2.0.16</mina.version>
   </properties>
 
@@ -94,6 +95,25 @@
       <artifactId>spring-context</artifactId>
       <version>${spring.version}</version>
     </dependency>
+    <!--spring Aop-->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-aop</artifactId>
+      <version>${spring.version}</version>
+    </dependency>
+    <!--使用AspectJ方式注解需要相应的包-->
+    <dependency>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjrt</artifactId>
+      <version>${aspectj.version}</version>
+    </dependency>
+    <!--使用AspectJ方式注解需要相应的包-->
+    <dependency>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjweaver</artifactId>
+      <version>${aspectj.version}</version>
+    </dependency>
+
     <!-- 2)Spring DAO层 -->
     <dependency>
       <groupId>org.springframework</groupId>

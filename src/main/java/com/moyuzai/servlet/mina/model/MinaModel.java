@@ -14,7 +14,7 @@ import proto.MessageProtoBuf;
 
 import java.util.Map;
 
-@Component
+
 public abstract class MinaModel {
 
     protected MessageProtoBuf.ProtoMessage message;
