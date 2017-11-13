@@ -34,6 +34,8 @@ public class UsersResponse<T> {
     public UsersResponse(MyEnum enums) {
         state = enums.isState();
         message = enums.getStateInfo();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        this.time = dateFormat.format(new Date());
     }
 
     public void setFromEnum(MyEnum myEnum){

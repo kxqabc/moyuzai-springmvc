@@ -37,6 +37,10 @@ public class SomeoneQuitNotifyModel extends NotifyModel implements NotifyUser {
         if (DataFormatTransformUtil.isNullOrEmpty(userId))
             return false;
 
+        String userName = (String) paramterMap.get("userName");
+        if (DataFormatTransformUtil.isNullOrEmpty(userName))
+            return false;
+
         groupId = (long) paramterMap.get("groupId");
         if (DataFormatTransformUtil.isNullOrEmpty(groupId))
             return false;
@@ -55,6 +59,7 @@ public class SomeoneQuitNotifyModel extends NotifyModel implements NotifyUser {
         toUsersJson.put("amount",amount);
         toManagerJson.put("groupId",groupId);
         toManagerJson.put("userId",userId);
+        toManagerJson.put("userName",userName);
 
         toUsers = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.SOMEONE_QUIT_NOTIFY,new Gson().toJson(toUsersJson));
         toManager = DataFormatTransformUtil.packingToProtoMessageOption(MessageProtoBuf.ProtoMessage.Type.SOMEONE_QUIT_NOTIFY,new Gson().toJson(toManagerJson));

@@ -537,8 +537,11 @@ public class ServiceProxyImpl implements ServiceProxy{
         Map<String,Object> paramterMap = new HashMap<>();
         ServiceData userIdsData = userGroupService.queryAllUserIdOfGroup(groupId);
         GroupResponse groupResponse = getGroupWithMoreDetail(groupId);
+        ServiceData userNameData = userService.getUserById(userId);
         Group group;
         long managerId;
+        String userName;
+        //获取群组信息
         if (groupResponse.isState()) {
             group = groupResponse.getGroup();
             managerId = group.getManagerId();
@@ -546,10 +549,18 @@ public class ServiceProxyImpl implements ServiceProxy{
         else {
             return;
         }
+        //获取退群用户信息
+        if (userNameData.isState()){
+            userName = ((User) userNameData.getData()).getUserName();
+        }else
+            return;
+        //构造参数映射表
         paramterMap.put("groupId",groupId);
         paramterMap.put("userId",userId);
         paramterMap.put("amount",group.getAmount());
         paramterMap.put("managerId",managerId);
+        paramterMap.put("userName",userName);
+
         if (userIdsData.isState() && groupResponse.isState()) {
             List<Long> userIds = (List<Long>) userIdsData.getData();
             Set<Long> userIdSet = new HashSet<>();

@@ -22,6 +22,8 @@ public class GroupResponse {
 
     public GroupResponse(MyEnum myEnum) {
         this.state = myEnum.isState();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        this.time = dateFormat.format(new Date());
     }
 
     public GroupResponse(boolean state, Group group) {
